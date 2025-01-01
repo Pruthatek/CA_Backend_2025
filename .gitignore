@@ -1,2 +1,3 @@
 caenv
 *.pyc
+*.sqlite3
