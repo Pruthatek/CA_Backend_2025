@@ -20,7 +20,18 @@ from .views import (
     CreateUserView,
     LoginView,
     AssignRoleView,
-    CheckPermissionView
+    CheckPermissionView,
+    RoleCreateAPIView,
+    RoleListAPIView,
+    RoleUpdateAPIView,
+    RoleDeleteAPIView,
+    PermissionCreateAPIView,
+    PermissionListAPIView,
+    PermissionUpdateAPIView,
+    PermissionDeleteAPIView,
+    RolePermissionAddAPIView,
+    RolePermissionListAPIView,
+    RolePermissionRemoveAPIView,
 )
 
 urlpatterns = [
@@ -29,5 +40,16 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('assign-role/', AssignRoleView.as_view(), name='assign-role'),
     path('check-permission/', CheckPermissionView.as_view(), name='check-permission'),
+    path('roles/create/', RoleCreateAPIView.as_view(), name='create-role'),
+    path('roles/list/', RoleListAPIView.as_view(), name='list-roles'),
+    path('roles/update/<int:role_id>/', RoleUpdateAPIView.as_view(), name='update-role'),
+    path('roles/delete/<int:role_id>/', RoleDeleteAPIView.as_view(), name='delete-role'),
+    path('permissions/create/', PermissionCreateAPIView.as_view(), name='create-permission'),
+    path('permissions/list/', PermissionListAPIView.as_view(), name='list-permissions'),
+    path('permissions/update/<int:permission_id>/', PermissionUpdateAPIView.as_view(), name='update-permission'),
+    path('permissions/delete/<int:permission_id>/', PermissionDeleteAPIView.as_view(), name='delete-permission'),
+    path('role-permission/add/', RolePermissionAddAPIView.as_view(), name='add-role-permissions'),
+    path('role-permission/list/<int:role_id>/', RolePermissionListAPIView.as_view(), name='list-role-permissions'),
+    path('role-permission/remove/', RolePermissionRemoveAPIView.as_view(), name='remove-role-permissions'),  
 ]
 

@@ -277,3 +277,63 @@ class PermissionDeleteAPIView(APIView):
             return Response({"message": "Permission deleted successfully"}, status=status.HTTP_200_OK)
         except Permission.DoesNotExist:
             return Response({"error": "Permission not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class RolePermissionAddAPIView(APIView):
+    def post(self, request):
+        """Add permissions to a role"""
+        role_id = request.data.get("role_id")
+        permission_ids = request.data.get("permission_ids", [])  # List of permission IDs
+
+        if not role_id or not permission_ids:
+            return Response({"error": "role_id and permission_ids are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            role = Role.objects.get(id=role_id)
+            for permission_id in permission_ids:
+                permission = Permission.objects.get(id=permission_id)
+                RolePermission.objects.get_or_create(role=role, permission=permission)
+
+            return Response({"message": "Permissions added to role successfully"}, status=status.HTTP_200_OK)
+
+        except Role.DoesNotExist:
+            return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Permission.DoesNotExist:
+            return Response({"error": "One or more permissions not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class RolePermissionListAPIView(APIView):
+    def get(self, request, role_id):
+        """List all permissions for a specific role"""
+        try:
+            role = Role.objects.get(id=role_id)
+            permissions = role.permissions.filter(is_active=True).values(
+                "id", "name", "description", "is_active", "created_on", "updated_on"
+            )
+            return Response({"role": role.name, "permissions": list(permissions)}, status=status.HTTP_200_OK)
+
+        except Role.DoesNotExist:
+            return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class RolePermissionRemoveAPIView(APIView):
+    def post(self, request):
+        """Remove permissions from a role"""
+        role_id = request.data.get("role_id")
+        permission_ids = request.data.get("permission_ids", [])  # List of permission IDs
+
+        if not role_id or not permission_ids:
+            return Response({"error": "role_id and permission_ids are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            role = Role.objects.get(id=role_id)
+            for permission_id in permission_ids:
+                permission = Permission.objects.get(id=permission_id)
+                RolePermission.objects.filter(role=role, permission=permission).delete()
+
+            return Response({"message": "Permissions removed from role successfully"}, status=status.HTTP_200_OK)
+
+        except Role.DoesNotExist:
+            return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Permission.DoesNotExist:
+            return Response({"error": "One or more permissions not found"}, status=status.HTTP_404_NOT_FOUND)
