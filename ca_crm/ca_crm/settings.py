@@ -93,6 +93,7 @@ WSGI_APPLICATION = 'ca_crm.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -120,6 +121,11 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+CORS_ALLOW_ALL_ORIGINS = True  # For development only
+# CORS_ALLOWED_ORIGINS = [
+#     "https://bill.radiantplanks.com",
+# ]
+CORS_ALLOW_CREDENTIALS = True
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -136,7 +142,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')  # Directory for collected static files
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'staticfiles'),  # Directory for project-specific static files
+]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
