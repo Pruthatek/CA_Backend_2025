@@ -38,7 +38,7 @@ class WorkCategory(models.Model):
 
 
 class WorkCategoryFilesRequired(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="files_required")
     file_name = models.CharField(max_length=255)
     created_by = models.ForeignKey(
@@ -56,7 +56,7 @@ class WorkCategoryFilesRequired(models.Model):
     
 
 class WorkCategoryActivityList(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="activity_list")
     activity_name = models.CharField(max_length=255)
     assigned_percentage = models.FloatField(blank=True, null=True)
@@ -73,7 +73,7 @@ class WorkCategoryActivityList(models.Model):
 
 
 class WorkCategoryUploadDocumentRequired(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="upload_document")
     file_name = models.CharField(max_length=255)
     created_by = models.ForeignKey(
@@ -103,11 +103,10 @@ class ClientWorkCategoryAssignment(models.Model):
                         ("payment_received", "Payment Received"),
                         ("task_closed", "Task Closed")]
     priority_choices = [(1, "Low"), (2, "Medium"), (3, "High"), (4, "Urgent")]
-    id = models.IntegerField(primary_key=True)
+    assignment_id = models.AutoField(primary_key=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="work_category_customer")
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="assignments")
     review_notes = models.CharField(max_length=400, blank=True, null=True)
-    review_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="work_category_reviewed")
     progress = models.CharField(max_length=100, choices=progress_choices, default="pending_from_client_side")
     allocated_hours = models.FloatField(blank=True, null=True)
     priority = models.IntegerField(default=1, choices=progress_choices)
@@ -115,6 +114,7 @@ class ClientWorkCategoryAssignment(models.Model):
     completion_date = models.DateField(blank=True, null=True)
     assigned_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="work_category_assignments")
     assigned_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="work_category_assignments_assigned")
+    review_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="work_category_reviewed")
     created_date = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="work_category_assignments_created")
     updated_date = models.DateTimeField(auto_now=True)
@@ -126,10 +126,10 @@ class ClientWorkCategoryAssignment(models.Model):
     
 
 class AssignedWorkRequiredFiles(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     assignment = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.CASCADE, related_name="required_files")
     file_name = models.CharField(max_length=255)
-    file_path = models.CharField(max_length=255)
+    file_path = models.CharField(max_length=255, null=True, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -140,9 +140,9 @@ class AssignedWorkRequiredFiles(models.Model):
 
 class AssignedWorkActivity(models.Model):
     status_choices = [("pending", "Pending"), ("in_progress", "In Progress"), ("completed", "Completed")]
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     assignment = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.CASCADE, related_name="activities")
-    activity = models.CharField(max_length=100)
+    activity = models.CharField(max_length=100, null=True, blank=True)
     assigned_percentage = models.FloatField(blank=True, null=True)
     status = models.CharField(max_length=100, choices=status_choices, default="pending")
     start_date = models.DateField(blank=True, null=True)
@@ -155,10 +155,10 @@ class AssignedWorkActivity(models.Model):
     
 
 class AssignedWorkOutputFiles(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     assignment = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.CASCADE, related_name="output_files")
     file_name = models.CharField(max_length=255)
-    file_path = models.CharField(max_length=255)
+    file_path = models.CharField(max_length=255, null=True, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)

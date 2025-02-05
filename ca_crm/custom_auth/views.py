@@ -234,11 +234,15 @@ class LoginView(APIView):
 
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
+            user_details = {
+                'user_id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'role': user.role.name,
+            }
             return Response(
                 {
-                    'user_id': user.id,
-                    'username': user.username,
-                    'email': user.email,
+                    'user_details': user_details,
                     'refresh': str(refresh),
                     'access': str(refresh.access_token),
                 },
