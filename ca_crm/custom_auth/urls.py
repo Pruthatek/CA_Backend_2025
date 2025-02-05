@@ -34,12 +34,14 @@ from .views import (
     RolePermissionListAPIView,
     RolePermissionRemoveAPIView,
 )
+from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('create-user/', CreateEmployeeView.as_view(), name='create-employee'),
     path('retrieve-user/<int:user_id>/', RetrieveEmployeeView.as_view(), name='retrieve-employee'),
     path('login/', LoginView.as_view(), name='login'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('assign-role/', AssignRoleView.as_view(), name='assign-role'),
     path('check-permission/', CheckPermissionView.as_view(), name='check-permission'),
     path('roles/create/', RoleCreateAPIView.as_view(), name='create-role'),
