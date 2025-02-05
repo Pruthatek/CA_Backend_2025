@@ -1,19 +1,46 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import CustomUser, Permission, Role, RolePermission
+from .models import CustomUser, Permission, Role, RolePermission, EmployeeProfile, ReportingUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAdminUser,AllowAny, IsAuthenticated
+import posixpath
+from django.core.files.storage import FileSystemStorage
+import traceback
+from django.conf import settings
+from datetime import datetime, date
+import os
+import uuid
+import time
 
 
-class CreateUserView(APIView):
+def generate_short_unique_filename(extension):
+    # Shortened UUID (6 characters) + Unix timestamp for uniqueness
+    unique_id = uuid.uuid4().hex[:6]  # Get the first 6 characters of UUID
+    timestamp = str(int(time.time()))  # Unix timestamp as a string
+    return f"{unique_id}_{timestamp}{extension}"
+
+
+class CreateEmployeeView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         data = request.data
         try:
+            # Handle photo upload
+            photo_url = request.FILES.get("photo_url")
+            if photo_url:
+                extension = os.path.splitext(photo_url.name)[1]
+                short_unique_filename = generate_short_unique_filename(extension)
+                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'photo_urls'))
+                logo_path = fs.save(short_unique_filename, photo_url)
+                logo_url = posixpath.join('media/photo_urls', logo_path)
+            else:
+                logo_url = ""
+
             # Create the user
             user = CustomUser.objects.create(
                 username=data['username'],
@@ -21,25 +48,168 @@ class CreateUserView(APIView):
                 password=make_password(data['password']),
                 first_name=data.get('first_name', ''),
                 last_name=data.get('last_name', ''),
+                gender=data.get('gender', ''),
+                phone_number=data.get('phone_number', ''),
+                employee_code=data.get('employee_code', ''),
+                address=data.get('address', ''),
+                photo_url=logo_url,
+                role=Role.objects.get(name=data.get('role', 'employee')),  # Assuming 'employee' is a valid role
             )
 
+            # Create EmployeeProfile entry
+            EmployeeProfile.objects.create(
+                user=user,
+                date_of_joining=data.get('date_of_joining'),
+                date_of_leaving=data.get('date_of_leaving', None),
+                referred_by=data.get('referred_by', ''),
+                designation=data.get('designation', ''),
+                is_active=data.get('is_active', True),
+                login_enabled=data.get('login_enabled', True),
+            )
+
+            # Create ReportingUser entry
+            if data.get('reporting_to', None) and data.get('working_under', None):
+                # Check if referenced user exists
+                try:
+                    
+                    reporting_to_user = CustomUser.objects.get(id=data['reporting_to'])
+                    working_under_user = CustomUser.objects.get(id=data['working_under'])
+                    ReportingUser.objects.create(
+                        user=user,
+                        reporting_to=reporting_to_user,
+                        working_under=working_under_user,
+                        is_active=True,
+                    )
+                except CustomUser.DoesNotExist:
+                    return Response(
+                        {'error': 'Reporting to or working under user not found'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                # Create ReportingUser entry
+
+
             # Generate JWT tokens
-            refresh = RefreshToken.for_user(user)
             return Response(
                 {
                     'user_id': user.id,
                     'username': user.username,
                     'email': user.email,
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
+                    'message': 'Employee created successfully',
                 },
                 status=status.HTTP_201_CREATED,
+            )
+
+        except CustomUser.DoesNotExist as e:
+            return Response(
+                {'error': f"Referenced user not found: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class RetrieveEmployeeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        try:
+            user = CustomUser.objects.get(id=user_id)
+            employee_profile = EmployeeProfile.objects.get(user=user)
+            
+            # Try fetching the ReportingUser, but handle if it doesn't exist
+            try:
+                reporting_user = ReportingUser.objects.get(user=user)
+                reporting_data = {
+                    "reporting_to": reporting_user.reporting_to.id if reporting_user.reporting_to else None,
+                    "working_under": reporting_user.working_under.id if reporting_user.working_under else None,
+                    "is_active": reporting_user.is_active,
+                } if reporting_user.reporting_to else None
+            except ReportingUser.DoesNotExist:
+                reporting_data = None
+
+            data = {
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "phone_number": user.phone_number,
+                    "address": user.address,
+                },
+                "employee_profile": {
+                    "date_of_joining": employee_profile.date_of_joining,
+                    "date_of_leaving": employee_profile.date_of_leaving,
+                    "referred_by": employee_profile.referred_by,
+                    "designation": employee_profile.designation,
+                    "is_active": employee_profile.is_active,
+                    "login_enabled": employee_profile.login_enabled,
+                },
+            }
+
+            if reporting_data:
+                data["reporting_user"] = reporting_data
+
+            return Response(data, status=status.HTTP_200_OK)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except EmployeeProfile.DoesNotExist:
+            return Response({"error": "Employee profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class UpdateEmployeeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, user_id):
+        data = request.data
+        try:
+            user = CustomUser.objects.get(id=user_id)
+            employee_profile = EmployeeProfile.objects.get(user=user)
+            reporting_user = ReportingUser.objects.get(user=user)
+
+            # Update user fields
+            user.first_name = data.get('first_name', user.first_name)
+            user.last_name = data.get('last_name', user.last_name)
+            user.phone_number = data.get('phone_number', user.phone_number)
+            user.address = data.get('address', user.address)
+            user.save()
+
+            # Update employee profile
+            employee_profile.date_of_joining = data.get('date_of_joining', employee_profile.date_of_joining)
+            employee_profile.date_of_leaving = data.get('date_of_leaving', employee_profile.date_of_leaving)
+            employee_profile.referred_by = data.get('referred_by', employee_profile.referred_by)
+            employee_profile.designation = data.get('designation', employee_profile.designation)
+            employee_profile.is_active = data.get('is_active', employee_profile.is_active)
+            employee_profile.login_enabled = data.get('login_enabled', employee_profile.login_enabled)
+            employee_profile.save()
+
+            # Update reporting user only if mappings change
+            if 'reporting_to' in data:
+                new_reporting_to = CustomUser.objects.get(id=data['reporting_to']) if data['reporting_to'] else None
+                if reporting_user.reporting_to != new_reporting_to:
+                    reporting_user.reporting_to = new_reporting_to
+
+            if 'working_under' in data:
+                new_working_under = CustomUser.objects.get(id=data['working_under']) if data['working_under'] else None
+                if reporting_user.working_under != new_working_under:
+                    reporting_user.working_under = new_working_under
+
+            reporting_user.is_active = data.get('is_active', reporting_user.is_active)
+            reporting_user.save()
+
+            return Response({"message": "User updated successfully"}, status=status.HTTP_200_OK)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except EmployeeProfile.DoesNotExist:
+            return Response({"error": "Employee profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        except ReportingUser.DoesNotExist:
+            return Response({"error": "Reporting user not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LoginView(APIView):

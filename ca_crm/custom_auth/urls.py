@@ -17,7 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from .views import (
-    CreateUserView,
+    CreateEmployeeView,
+    RetrieveEmployeeView,
     LoginView,
     AssignRoleView,
     CheckPermissionView,
@@ -36,7 +37,8 @@ from .views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('create-user/', CreateUserView.as_view(), name='create-user'),
+    path('create-user/', CreateEmployeeView.as_view(), name='create-employee'),
+    path('retrieve-user/<int:user_id>/', RetrieveEmployeeView.as_view(), name='retrieve-employee'),
     path('login/', LoginView.as_view(), name='login'),
     path('assign-role/', AssignRoleView.as_view(), name='assign-role'),
     path('check-permission/', CheckPermissionView.as_view(), name='check-permission'),

@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name='WorkCategoryUploadDocumetRequired',
+            name='WorkCategoryUploadDocumentRequired',
             fields=[
                 ('id', models.IntegerField(primary_key=True, serialize=False)),
                 ('file_name', models.CharField(max_length=255)),

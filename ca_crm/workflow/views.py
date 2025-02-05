@@ -6,13 +6,15 @@ from .models import (
     WorkCategory,
     WorkCategoryFilesRequired,
     WorkCategoryActivityList,
-    WorkCategoryUploadDocumetRequired,
+    WorkCategoryUploadDocumentRequired,
+    ClientWorkCategoryAssignment,
 )
 from datetime import datetime, time
 from rest_framework.permissions import IsAuthenticated
 import jwt 
 from django.conf import settings
 from custom_auth.models import CustomUser
+from clients.models import Customer
 
 class ModifiedApiview(APIView):
     permission_classes = [IsAuthenticated]
@@ -35,14 +37,12 @@ class DepartmentCreateAPIView(ModifiedApiview):
             user = self.get_user_from_token(request)
             data = request.data
             name = data.get("name")
-            description = data.get("description", "")
 
             if not name:
                 return Response({"error": "Name is required"}, status=status.HTTP_400_BAD_REQUEST)
 
             department = Department.objects.create(
                 name=name,
-                description=description,
                 created_by_id=user
             )
             return Response({"message": "Department created", "id": department.id}, status=status.HTTP_201_CREATED)
@@ -60,8 +60,7 @@ class DepartmentGetAPIView(ModifiedApiview):
                     return Response({"error": "Department not found"}, status=status.HTTP_404_NOT_FOUND)
                 data = {
                     "id": department.id,
-                    "name": department.name,
-                    "description": department.description 
+                    "name": department.name
                 }
                 return Response(data, status=status.HTTP_200_OK)
             departments = Department.objects.filter(is_active=True).values("id", "name", "description")
@@ -80,7 +79,6 @@ class DepartmentUpdateAPIView(ModifiedApiview):
 
             data = request.data
             department.name = data.get("name", department.name)
-            department.description = data.get("description", department.description)
             department.updated_by = user
             department.updated_date = datetime.now()
             department.save()
@@ -111,7 +109,6 @@ class WorkCategoryCreateAPIView(ModifiedApiview):
             user = self.get_user_from_token(request)
             data = request.data
             name = data.get("name")
-            description = data.get("description", "")
             department = data.get("department")
 
             if not name or not department:
@@ -122,7 +119,6 @@ class WorkCategoryCreateAPIView(ModifiedApiview):
 
             work_category = WorkCategory.objects.create(
                 name=name,
-                description=description,
                 department_id=department,
                 created_by_id=user,
             )
@@ -145,7 +141,6 @@ class WorkCategoryGetAPIView(ModifiedApiview):
                 data = {
                     "id": work_category.id,
                     "name": work_category.name,
-                    "description": work_category.description,
                     "department": work_category.department.name,
                 }
                 return Response(data, status=status.HTTP_200_OK)
@@ -165,7 +160,6 @@ class WorkCategoryUpdateAPIView(ModifiedApiview):
 
             data = request.data
             work_category.name = data.get("name", work_category.name)
-            work_category.description = data.get("description", work_category.description)
             work_category.save()
 
             return Response({"message": "Work category updated"}, status=status.HTTP_200_OK)
@@ -195,7 +189,6 @@ class WorkCategoryFilesRequiredCreateAPIView(ModifiedApiview):
             data = request.data
             work_category = data.get("work_category")
             file_name = data.get("file_name")
-            description = data.get("description", "")
 
             if not work_category or not file_name:
                 return Response(
@@ -206,7 +199,6 @@ class WorkCategoryFilesRequiredCreateAPIView(ModifiedApiview):
             file_required = WorkCategoryFilesRequired.objects.create(
                 work_category_id=work_category,
                 file_name=file_name,
-                description=description,
                 created_by_id=user,
             )
             return Response(
@@ -228,7 +220,6 @@ class WorkCategoryFilesRequiredGetAPIView(ModifiedApiview):
                 data = {
                     "id": work_category_files.id,
                     "file_name": work_category_files.file_name,
-                    "description": work_category_files.description,
                     "work_category": work_category_files.work_category.name,
                 }
                 return Response(data, status=status.HTTP_200_OK)
@@ -248,7 +239,6 @@ class WorkCategoryFilesRequiredUpdateAPIView(ModifiedApiview):
 
             data = request.data
             work_category_file.file_name = data.get("file_name", work_category_file.file_name)
-            work_category_file.description = data.get("description", work_category_file.description)
             work_category_file.updated_by = user
             work_category_file.save()
 
@@ -278,7 +268,7 @@ class WorkCategoryActivityListCreateAPIView(ModifiedApiview):
             data = request.data
             work_category = data.get("work_category")
             activity_name = data.get("activity_name")
-            description = data.get("description", "")
+            assigned_percentage = data.get("assigned_percentage", 0)
             created_by = data.get("created_by")
 
             if not work_category or not activity_name:
@@ -290,7 +280,7 @@ class WorkCategoryActivityListCreateAPIView(ModifiedApiview):
             activity_list = WorkCategoryActivityList.objects.create(
                 work_category_id=work_category,
                 activity_name=activity_name,
-                description=description,
+                assigned_percentage=assigned_percentage,
                 created_by_id=created_by,
             )
             return Response(
@@ -312,12 +302,12 @@ class WorkCategoryActivityListGetAPIView(ModifiedApiview):
                 data = {
                     "id": work_category.id,
                     "activity_name": work_category.activity_name,
-                    "description": work_category.description,
+                    "assigned_percentage": work_category.assigned_percentage,
                     "work_category": work_category.work_category.name,
                 }
                 return Response(data, status=status.HTTP_200_OK)
             work_categories = WorkCategoryActivityList.objects.filter(is_active=True).values("id", "activity_name", 
-                    "description", "work_category")
+                    "assigned_percentage", "work_category")
             return Response(list(work_categories), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -333,7 +323,7 @@ class WorkCategoryActivityListUpdateAPIView(ModifiedApiview):
 
             data = request.data
             work_category.activity_name = data.get("activity_name", work_category.activity_name)
-            work_category.description = data.get("description", work_category.description)
+            work_category.assigned_percentage = data.get("assigned_percentage", work_category.assigned_percentage)
             work_category.updated_by = user
             work_category.save()
 
@@ -364,7 +354,6 @@ class WorkCategoryUploadDocumentRequiredCreateAPIView(ModifiedApiview):
             data = request.data
             work_category = data.get("work_category")
             file_name = data.get("file_name")
-            description = data.get("description", "")
 
             if not work_category or not file_name:
                 return Response(
@@ -372,10 +361,9 @@ class WorkCategoryUploadDocumentRequiredCreateAPIView(ModifiedApiview):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            upload_document = WorkCategoryUploadDocumetRequired.objects.create(
+            upload_document = WorkCategoryUploadDocumentRequired.objects.create(
                 work_category_id=work_category,
                 file_name=file_name,
-                description=description,
                 created_by_id=user,
             )
             return Response(
@@ -391,18 +379,17 @@ class WorkCategoryUploadDocumentRequiredGetAPIView(ModifiedApiview):
         try:
             user = self.get_user_from_token(request)
             if id:
-                work_category = WorkCategoryUploadDocumetRequired.objects.filter(id=id, is_active=True).first()
+                work_category = WorkCategoryUploadDocumentRequired.objects.filter(id=id, is_active=True).first()
                 if not work_category:
                     return Response({"error": "Work category not found"}, status=status.HTTP_404_NOT_FOUND)
                 data = {
                     "id": work_category.id,
                     "file_name": work_category.file_name,
-                    "description": work_category.description,
                     "work_category": work_category.work_category.name,
                 }
                 return Response(data, status=status.HTTP_200_OK)
-            work_categories = WorkCategoryUploadDocumetRequired.objects.filter(is_active=True).values("id", "file_name", 
-                    "description", "work_category")
+            work_categories = WorkCategoryUploadDocumentRequired.objects.filter(is_active=True).values("id", "file_name", 
+                     "work_category")
             return Response(list(work_categories), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -412,13 +399,12 @@ class WorkCategoryUploadDocumentRequiredUpdateAPIView(ModifiedApiview):
     def put(self, request, id):
         try:
             user = self.get_user_from_token(request)
-            work_category = WorkCategoryUploadDocumetRequired.objects.filter(id=id, is_active=True).first()
+            work_category = WorkCategoryUploadDocumentRequired.objects.filter(id=id, is_active=True).first()
             if not work_category:
                 return Response({"error": "Work category required file not found"}, status=status.HTTP_404_NOT_FOUND)
 
             data = request.data
             work_category.file_name = data.get("file_name", work_category.file_name)
-            work_category.description = data.get("description", work_category.description)
             work_category.updated_by = user
             work_category.save()
 
@@ -431,12 +417,173 @@ class WorkCategoryUploadDocumentRequiredDeactivateAPIView(ModifiedApiview):
     def delete(self, request, id):
         try:
             user = self.get_user_from_token(request)
-            work_category = WorkCategoryUploadDocumetRequired.objects.filter(id=id, is_active=True).first()
+            work_category = WorkCategoryUploadDocumentRequired.objects.filter(id=id, is_active=True).first()
             if not work_category:
                 return Response({"error": "Work category required file not found"}, status=status.HTTP_404_NOT_FOUND)
             work_category.is_active = False
             work_category.updated_by = user
             work_category.save()
-            return Response({"message": "Work category required filedeactivated"}, status=status.HTTP_200_OK)
+            return Response({"message": "Work category required file deactivated"}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AssignTaskView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+        try:
+            # Validate required fields
+            customer_id = data.get("customer_id")
+            work_category_id = data.get("work_category_id")
+            assigned_to_id = data.get("assigned_to_id")
+            
+            assigned_by = request.user
+
+            if not all([customer_id, work_category_id, assigned_to_id]):
+                return Response(
+                    {"error": "customer_id, work_category_id, and assigned_to_id are required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Fetch related objects
+            customer = Customer.objects.get(id=customer_id)
+            work_category = WorkCategory.objects.get(id=work_category_id)
+            assigned_to = CustomUser.objects.get(id=assigned_to_id)
+
+            # Create the assignment
+            assignment = ClientWorkCategoryAssignment.objects.create(
+                customer=customer,
+                work_category=work_category,
+                assigned_to=assigned_to,
+                assigned_by=assigned_by,
+                is_active=data.get("is_active", True),
+            )
+
+            return Response(
+                {
+                    "message": "Task assigned successfully.",
+                    "assignment": {
+                        "id": assignment.id,
+                        "customer": assignment.customer.name_of_business,
+                        "work_category": assignment.work_category.name,
+                        "assigned_to": assignment.assigned_to.username,
+                        "assigned_by": assignment.assigned_by.username,
+                        "created_date": assignment.created_date,
+                        "is_active": assignment.is_active,
+                    },
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        except Customer.DoesNotExist:
+            return Response({"error": "Customer not found."}, status=status.HTTP_404_NOT_FOUND)
+        except WorkCategory.DoesNotExist:
+            return Response({"error": "Work category not found."}, status=status.HTTP_404_NOT_FOUND)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "Assigned user not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EditAssignedTaskView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, assignment_id):
+        data = request.data
+        try:
+            assignment = ClientWorkCategoryAssignment.objects.get(id=assignment_id)
+
+            # Update fields only if they are provided
+            if "customer_id" in data:
+                assignment.customer = Customer.objects.get(id=data["customer_id"])
+            if "work_category_id" in data:
+                assignment.work_category = WorkCategory.objects.get(id=data["work_category_id"])
+            if "assigned_to_id" in data:
+                assignment.assigned_to = CustomUser.objects.get(id=data["assigned_to_id"])
+            if "is_active" in data:
+                assignment.is_active = data["is_active"]
+
+            assignment.updated_date = datetime.now()
+            assignment.save()
+
+            return Response(
+                {
+                    "message": "Assignment updated successfully.",
+                    "assignment": {
+                        "id": assignment.id,
+                        "customer": assignment.customer.name_of_business,
+                        "work_category": assignment.work_category.name,
+                        "assigned_to": assignment.assigned_to.username if assignment.assigned_to else None,
+                        "assigned_by": assignment.assigned_by.username if assignment.assigned_by else None,
+                        "updated_date": assignment.updated_date,
+                        "is_active": assignment.is_active,
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Customer.DoesNotExist:
+            return Response({"error": "Customer not found."}, status=status.HTTP_404_NOT_FOUND)
+        except WorkCategory.DoesNotExist:
+            return Response({"error": "Work category not found."}, status=status.HTTP_404_NOT_FOUND)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DeleteAssignedTaskView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, assignment_id):
+        try:
+            assignment = ClientWorkCategoryAssignment.objects.get(id=assignment_id)
+            assignment.delete()
+            return Response({"message": "Assignment deleted successfully."}, status=status.HTTP_200_OK)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RetrieveAssignedTaskView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, assignment_id=None):
+        try:
+            if assignment_id:
+                assignment = ClientWorkCategoryAssignment.objects.get(id=assignment_id)
+                data = {
+                    "id": assignment.id,
+                    "customer": assignment.customer.name_of_business,
+                    "work_category": assignment.work_category.name,
+                    "assigned_to": assignment.assigned_to.username if assignment.assigned_to else None,
+                    "assigned_by": assignment.assigned_by.username if assignment.assigned_by else None,
+                    "created_date": assignment.created_date,
+                    "updated_date": assignment.updated_date,
+                    "is_active": assignment.is_active,
+                }
+            else:
+                assignments = ClientWorkCategoryAssignment.objects.all()
+                data = [
+                    {
+                        "id": a.id,
+                        "customer": a.customer.name_of_business,
+                        "work_category": a.work_category.name,
+                        "assigned_to": a.assigned_to.username if a.assigned_to else None,
+                        "assigned_by": a.assigned_by.username if a.assigned_by else None,
+                        "created_date": a.created_date,
+                        "updated_date": a.updated_date,
+                        "is_active": a.is_active,
+                    }
+                    for a in assignments
+                ]
+
+            return Response(data, status=status.HTTP_200_OK)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

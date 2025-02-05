@@ -42,6 +42,9 @@ class CustomUser(models.Model):
     last_name = models.CharField(max_length=50, null=True, blank=True)
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, related_name='users')
     phone_number = models.CharField(max_length=15, null=True, blank=True)
+    employee_code = models.CharField(max_length=20, null=True, blank=True)
+    gender = models.CharField(max_length=20, null=True, blank=True)
+    photo_url = models.CharField(max_length=255, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -77,3 +80,26 @@ class CustomUser(models.Model):
             ).exists()
         
         return check
+    
+class EmployeeProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True)
+    date_of_joining = models.DateField(null=True, blank=True)
+    date_of_leaving = models.DateField(null=True, blank=True)
+    referred_by = models.CharField(max_length=150, null=True, blank=True)
+    designation = models.CharField(max_length=50, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    login_enabled = models.BooleanField(default=True)
+
+
+    def __str__(self):
+        return self.user.username
+    
+
+class ReportingUser(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True)
+    reporting_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='reportees')
+    working_under = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='subordinates')
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.user.username
