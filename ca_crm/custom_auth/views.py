@@ -11,6 +11,7 @@ import posixpath
 from django.core.files.storage import FileSystemStorage
 import traceback
 from django.conf import settings
+import pandas as pd
 from datetime import datetime, date
 import os
 import uuid
@@ -482,9 +483,15 @@ class RolePermissionListAPIView(APIView):
         try:
             role = Role.objects.get(id=role_id)
             permissions = role.permissions.filter(is_active=True).values(
-                "id", "name", "description", "is_active", "created_on", "updated_on"
+                "id", "permission__name", "permission__description", "is_active", "created_on", "updated_on"
             )
-            return Response({"role": role.name, "permissions": list(permissions)}, status=status.HTTP_200_OK)
+            permissions_df = pd.DataFrame.from_records(list(permissions))
+            permissions_df.rename(columns={
+                "permission__name": "name",
+                "permission__description": "description"
+            }, inplace=True)
+
+            return Response({"role": role.name, "permissions": permissions_df.to_dict("records")}, status=status.HTTP_200_OK)
 
         except Role.DoesNotExist:
             return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
