@@ -6,10 +6,12 @@ from .models import (
     WorkCategory,
     WorkCategoryFilesRequired,
     WorkCategoryActivityList,
+    WorkCategoryActivityStages,
     WorkCategoryUploadDocumentRequired,
     ClientWorkCategoryAssignment,
     AssignedWorkRequiredFiles,
     AssignedWorkActivity,
+    AssignedWorkActivityStages,
     AssignedWorkOutputFiles,
 )
 from datetime import datetime, time
@@ -114,6 +116,7 @@ class WorkCategoryCreateAPIView(ModifiedApiview):
             data = request.data
             name = data.get("name")
             department_id = data.get("department")
+            fees = data.get("fees", 0)
 
             department = Department.objects.filter(id=department_id, is_active=True).first()
             if not name or not department:
@@ -125,6 +128,7 @@ class WorkCategoryCreateAPIView(ModifiedApiview):
             work_category = WorkCategory.objects.create(
                 name=name,
                 department=department,
+                fees=fees,
                 created_by=user,
             )
             return Response(
@@ -146,6 +150,7 @@ class WorkCategoryGetAPIView(ModifiedApiview):
                 data = {
                     "id": work_category.id,
                     "name": work_category.name,
+                    "fees": work_category.fees,
                     "department": work_category.department.name,
                 }
                 return Response(data, status=status.HTTP_200_OK)
@@ -165,9 +170,54 @@ class WorkCategoryUpdateAPIView(ModifiedApiview):
 
             data = request.data
             work_category.name = data.get("name", work_category.name)
+            work_category.fees = data.get("fees", work_category.fees)
             work_category.save()
 
             return Response({"message": "Work category updated"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GetDepartmentWorkCategoriesAPIView(ModifiedApiview):
+    def get(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            work_categories = WorkCategory.objects.filter(department_id=id, is_active=True).values("id", "name", "fees")
+            data = []
+            for work_category in work_categories:
+                wc_data = {
+                    "id": work_category["id"],
+                    "name": work_category["name"],
+                    "fees": work_category["fees"],
+                    "files_required": list(WorkCategoryFilesRequired.objects.filter(work_category_id=work_category["id"], is_active=True).values("file_name", "id")),
+                    "activities": list(WorkCategoryActivityList.objects.filter(work_category_id=work_category["id"], is_active=True).values("activity_name", "assigned_percentage", "id")),
+                    "activity_stages": list(WorkCategoryActivityStages.objects.filter(work_category_id=work_category["id"], is_active=True).values("activity_stage", "description", "id")),
+                    "output_files": list(WorkCategoryUploadDocumentRequired.objects.filter(work_category_id=work_category["id"], is_active=True).values("file_name", "id")),
+                }
+                data.append(wc_data)
+            return Response(data, status=status.HTTP_200_OK)        
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class WorkCategoryRetrieveAPIView(ModifiedApiview):
+    def get(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            work_category = WorkCategory.objects.filter(id=id, is_active=True).first()
+            if not work_category:
+                return Response({"error": "Work category not found"}, status=status.HTTP_404_NOT_FOUND)
+            data = {
+                "id": work_category.id,
+                "name": work_category.name,
+                "fees": work_category.fees,
+                "department": work_category.department.name,
+                "files_required": list(work_category.files_required.values("file_name", "id")),
+                "activities": list(work_category.activity_list.values("activity_name", "assigned_percentage", "id")),
+                "activity_stages": list(work_category.activity_stage.values("activity_stage", "description", "id")),
+                "output_files": list(work_category.upload_document.values("file_name", "id")),
+            }
+            return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -342,6 +392,91 @@ class WorkCategoryActivityListDeactivateAPIView(ModifiedApiview):
         try:
             user = self.get_user_from_token(request)
             work_category = WorkCategoryActivityList.objects.filter(id=id, is_active=True).first()
+            if not work_category:
+                return Response({"error": "Work category not found"}, status=status.HTTP_404_NOT_FOUND)
+            work_category.is_active = False
+            work_category.updated_by = user
+            work_category.save()
+            return Response({"message": "Work category deactivated"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class WorkCategoryActivityStagesCreateAPIView(ModifiedApiview):
+    def post(self, request):
+        user = self.get_user_from_token(request)
+        try:
+            data = request.data
+            work_category = data.get("work_category")
+            activity_stage = data.get("activity_stage")
+            description = data.get("description")
+
+            if not work_category or not activity_stage:
+                return Response(
+                    {"error": "Work Category and Activity Stage are required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            activity_stages = WorkCategoryActivityStages.objects.create(
+                work_category_id=work_category,
+                activity_stage=activity_stage,
+                description=description,
+                created_by=request.user,
+            )
+            return Response(
+                {"message": "Activity stage created", "id": activity_stages.id},
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class WorkCategoryActivityStagesGetAPIView(ModifiedApiview):
+    def get(self, request, id=None):
+        try:
+            user = self.get_user_from_token(request)
+            if id:
+                work_category = WorkCategoryActivityStages.objects.filter(id=id, is_active=True).first()
+                if not work_category:
+                    return Response({"error": "Work category not found"}, status=status.HTTP_404_NOT_FOUND)
+                data = {
+                    "id": work_category.id,
+                    "activity_stage": work_category.activity_stage,
+                    "work_category": work_category.work_category.name,
+                    "description": work_category.description,
+                }
+                return Response(data, status=status.HTTP_200_OK)
+            work_categories = WorkCategoryActivityStages.objects.filter(is_active=True).values("id", "activity_stage", 
+                     "work_category")
+            return Response(list(work_categories), status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class WorkCategoryActivityStagesUpdateAPIView(ModifiedApiview):
+    def put(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            work_category = WorkCategoryActivityStages.objects.filter(id=id, is_active=True).first()
+            if not work_category:
+                return Response({"error": "Work category not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            data = request.data
+            work_category.activity_stage = data.get("activity_stage", work_category.activity_stage)
+            work_category.description = data.get("description", work_category.description)
+            work_category.updated_by = user
+            work_category.save()
+
+            return Response({"message": "Work category updated"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class WorkCategoryActivityStagesDeactivateAPIView(ModifiedApiview):
+    def delete(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            work_category = WorkCategoryActivityStages.objects.filter(id=id, is_active=True).first()
             if not work_category:
                 return Response({"error": "Work category not found"}, status=status.HTTP_404_NOT_FOUND)
             work_category.is_active = False
@@ -527,6 +662,15 @@ class ClientWorkCategoryAssignmentCreateView(APIView):
                         assignment=assignment,
                         activity=activity.activity_name,
                         assigned_percentage=activity.assigned_percentage,
+                        is_active=True
+                    )
+
+                # copy activity stages
+                activity_stages = WorkCategoryActivityStages.objects.filter(work_category=work_category)
+                for stage in activity_stages:
+                    assigned_stage = AssignedWorkActivityStages.objects.create(
+                        assignment=assignment,
+                        activity_stage=stage.activity_stage,
                         is_active=True
                     )
 
@@ -789,4 +933,101 @@ class RetrieveAssignedTaskView(APIView):
             return Response({"error": "Assignment not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RetrieveAssignedTaskByUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        try:
+            user = CustomUser.objects.get(id=user_id)
+            assignments = ClientWorkCategoryAssignment.objects.filter(assigned_to=user, is_active=True)
+            data = [
+                {
+                    "id": a.id,
+                    "customer": a.customer.name_of_business,
+                    "work_category": a.work_category.name,
+                    "assigned_to": a.assigned_to.username if a.assigned_to else None,
+                    "assigned_by": a.assigned_by.username if a.assigned_by else None,
+                    "created_date": a.created_date,
+                    "updated_date": a.updated_date,
+                    "progress": a.progress,
+                    "is_active": a.is_active,
+                }
+                for a in assignments
+            ]
+
+            return Response(data, status=status.HTTP_200_OK)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class RetrieveAssignedTaskByReviewByView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        try:
+            user = CustomUser.objects.get(id=user_id)
+            assignments = ClientWorkCategoryAssignment.objects.filter(review_by=user, is_active=True)
+            data = [
+                {
+                    "id": a.id,
+                    "customer": a.customer.name_of_business,
+                    "work_category": a.work_category.name,
+                    "assigned_to": a.assigned_to.username if a.assigned_to else None,
+                    "assigned_by": a.assigned_by.username if a.assigned_by else None,
+                    "created_date": a.created_date,
+                    "updated_date": a.updated_date,
+                    "progress": a.progress,
+                    "is_active": a.is_active,
+                }
+                for a in assignments
+            ]
+
+            return Response(data, status=status.HTTP_200_OK)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SubmitReviewByView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, assignment_id):
+        data = request.data
+        try:
+            assignment = ClientWorkCategoryAssignment.objects.get(id=assignment_id)
+            assignment.review_by = request.user
+            assignment.review_notes = data.get("review_notes", assignment.review_notes)
+            assignment.progress = data.get("progress", assignment.progress)
+            assignment.priority = data.get("priority", assignment.priority)
+            assignment.updated_by = request.user
+            assignment.save()
+
+            return Response(
+                {
+                    "message": "Assignment updated successfully.",
+                    "assignment": {
+                        "id": assignment.id,
+                        "customer": assignment.customer.name_of_business,
+                        "work_category": assignment.work_category.name,
+                        "assigned_to": assignment.assigned_to.username if assignment.assigned_to else None,
+                        "assigned_by": assignment.assigned_by.username if assignment.assigned_by else None,
+                        "review_by": assignment.review_by.username if assignment.review_by else None,
+                        "progress": assignment.progress,
+                        "priority": assignment.priority,
+                        "start_date": assignment.start_date,
+                        "completion_date": assignment.completion_date,
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            
 

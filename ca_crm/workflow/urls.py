@@ -4,10 +4,12 @@ from .views import (
     DepartmentGetAPIView,
     DepartmentUpdateAPIView,
     DepartmentDeactivateAPIView,
+    GetDepartmentWorkCategoriesAPIView,
     WorkCategoryCreateAPIView,
     WorkCategoryGetAPIView,
     WorkCategoryUpdateAPIView,
     WorkCategoryDeactivateAPIView,
+    WorkCategoryRetrieveAPIView,
     WorkCategoryFilesRequiredCreateAPIView,
     WorkCategoryFilesRequiredGetAPIView,
     WorkCategoryFilesRequiredUpdateAPIView,
@@ -33,12 +35,14 @@ urlpatterns = [
     path('department/get/', DepartmentGetAPIView.as_view(), name='department_get'),
     path('department/update/<int:id>/', DepartmentUpdateAPIView.as_view(), name='department_update'),
     path('department/deactivate/<int:id>/', DepartmentDeactivateAPIView.as_view(), name='department_deactivate'),
+    path('department/get-work-categories/<int:id>/', GetDepartmentWorkCategoriesAPIView.as_view(), name='department_get_work_categories'),
     
     path('work-category/create/', WorkCategoryCreateAPIView.as_view(), name='work_category_create'),
     path('work-category/get/', WorkCategoryGetAPIView.as_view(), name='work_category_get'),
     path('work-category/update/<int:id>/', WorkCategoryUpdateAPIView.as_view(), name='work_category_update'),
     path('work-category/deactivate/<int:id>/', WorkCategoryDeactivateAPIView.as_view(), name='work_category_deactivate'),
-    
+    path('work-category/get/<int:id>/', WorkCategoryRetrieveAPIView.as_view(), name='work_category_retrieve'),
+
     path('work-category-files-required/create/', WorkCategoryFilesRequiredCreateAPIView.as_view(), name='work_category_files_required_create'),
     path('work-category-files-required/get/', WorkCategoryFilesRequiredGetAPIView.as_view(), name='work_category_files_required_get'),
     path('work-category-files-required/update/<int:id>/', WorkCategoryFilesRequiredUpdateAPIView.as_view(), name='work_category_files_required_update'),

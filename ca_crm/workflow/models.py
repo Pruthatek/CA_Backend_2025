@@ -23,6 +23,7 @@ class Department(models.Model):
 class WorkCategory(models.Model):
     name = models.CharField(max_length=255)
     department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="work_categories")
+    fees = models.FloatField(blank=True, null=True, default=0)
     created_by = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, related_name="workcategories_created"
     )
@@ -70,6 +71,23 @@ class WorkCategoryActivityList(models.Model):
 
     def __str__(self):
         return f"{self.activity_name} ({self.work_category.name})"
+
+
+class WorkCategoryActivityStages(models.Model):
+    id = models.AutoField(primary_key=True)
+    work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="activity_stage")
+    activity_stage = models.CharField(max_length=255)
+    description = models.CharField(max_length=200, blank=True, null=True)
+    created_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, related_name="workcategories_activitystage_created")
+    created_date = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, related_name="workcategories_activitystage_updated")
+    updated_date = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.activity_stage} ({self.work_category.name})"
 
 
 class WorkCategoryUploadDocumentRequired(models.Model):
@@ -153,6 +171,20 @@ class AssignedWorkActivity(models.Model):
     def __str__(self):
         return f"{self.activity.activity_name} ({self.assignment.customer.name_of_business})"
     
+
+class AssignedWorkActivityStages(models.Model):
+    id = models.AutoField(primary_key=True)
+    assignment = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.CASCADE, related_name="activity_stages")
+    activity_stage = models.CharField(max_length=100, null=True, blank=True)
+    status = models.CharField(max_length=100, null=True, blank=True)
+    start_date = models.DateField(blank=True, null=True)
+    completion_date = models.DateField(blank=True, null=True)
+    updated_date = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.stage} ({self.activity.activity})"
+
 
 class AssignedWorkOutputFiles(models.Model):
     id = models.AutoField(primary_key=True)
