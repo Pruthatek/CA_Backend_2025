@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'custom_auth',
     'workflow',
     'clients',
+    'employees',
 ]
 
 MIDDLEWARE = [
@@ -133,11 +134,10 @@ CORS_ALLOW_CREDENTIALS = True
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
-
 USE_I18N = True
 
-USE_TZ = True
+TIME_ZONE = 'Asia/Kolkata'
+USE_TZ = True  # Keep this enabled for proper timezone handling
 
 
 # Static files (CSS, JavaScript, Images)

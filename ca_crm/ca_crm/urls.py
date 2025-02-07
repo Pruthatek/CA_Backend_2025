@@ -23,4 +23,6 @@ urlpatterns = [
     path('auth/', include('custom_auth.urls')),
     path('workflow/', include('workflow.urls')),
     path('clients/', include('clients.urls')),
+    path('employees/', include('employees.urls')),
+    
 ]
