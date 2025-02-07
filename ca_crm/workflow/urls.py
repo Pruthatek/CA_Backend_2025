@@ -4,24 +4,36 @@ from .views import (
     DepartmentGetAPIView,
     DepartmentUpdateAPIView,
     DepartmentDeactivateAPIView,
+    
     GetDepartmentWorkCategoriesAPIView,
+    
     WorkCategoryCreateAPIView,
     WorkCategoryGetAPIView,
     WorkCategoryUpdateAPIView,
     WorkCategoryDeactivateAPIView,
+    
     WorkCategoryRetrieveAPIView,
+    
     WorkCategoryFilesRequiredCreateAPIView,
     WorkCategoryFilesRequiredGetAPIView,
     WorkCategoryFilesRequiredUpdateAPIView,
     WorkCategoryFilesRequiredDeactivateAPIView,
+    
     WorkCategoryActivityListCreateAPIView,
     WorkCategoryActivityListGetAPIView,
     WorkCategoryActivityListUpdateAPIView,
     WorkCategoryActivityListDeactivateAPIView,
+
+    WorkCategoryActivityStagesCreateAPIView,
+    WorkCategoryActivityStagesGetAPIView,
+    WorkCategoryActivityStagesUpdateAPIView,
+    WorkCategoryActivityStagesDeactivateAPIView,
+    
     WorkCategoryUploadDocumentRequiredCreateAPIView,
     WorkCategoryUploadDocumentRequiredGetAPIView,
     WorkCategoryUploadDocumentRequiredUpdateAPIView,
     WorkCategoryUploadDocumentRequiredDeactivateAPIView,
+    
     ClientWorkCategoryAssignmentCreateView,
     ClientWorkCategoryAssignmentRetrieveView,
     ClientWorkCategoryAssignmentUpdateView,
@@ -60,12 +72,17 @@ urlpatterns = [
     path('work-category-activity-list/update/<int:id>/', WorkCategoryActivityListUpdateAPIView.as_view(), name='work_category_activity_list_update'),
     path('work-category-activity-list/deactivate/<int:id>/', WorkCategoryActivityListDeactivateAPIView.as_view(), name='work_category_activity_list_deactivate'),
     
-    path('work-category-upload-document-required/create/', WorkCategoryUploadDocumentRequiredCreateAPIView.as_view(), name='work_category_upload_document_required_create'),
-    path('work-category-upload-document-required/get/', WorkCategoryUploadDocumentRequiredGetAPIView.as_view(),
+    path('work-category-activity-stage/create/', WorkCategoryActivityListCreateAPIView.as_view(), name='work_category_activity_stage_create'),
+    path('work-category-activity-stage/get/', WorkCategoryActivityStagesGetAPIView.as_view(), name='work_category_activity_stage_get'),
+    path('work-category-activity-stage/update/<int:id>/', WorkCategoryActivityStagesUpdateAPIView.as_view(), name='work_category_activity_stage_update'),
+    path('work-category-activity-stage/deactivate/<int:id>/', WorkCategoryActivityStagesDeactivateAPIView.as_view(), name='work_category_activity_stage_deactivate'),
+
+    path('work-category-output-document/create/', WorkCategoryUploadDocumentRequiredCreateAPIView.as_view(), name='work_category_upload_document_required_create'),
+    path('work-category-output-document/get/', WorkCategoryUploadDocumentRequiredGetAPIView.as_view(),
             name='work_category_upload_document_required_get'),
-    path('work-category-upload-document-required/update/<int:id>/', WorkCategoryUploadDocumentRequiredUpdateAPIView.as_view(),
+    path('work-category-output-document/update/<int:id>/', WorkCategoryUploadDocumentRequiredUpdateAPIView.as_view(),
             name='work_category_upload_document_required_update'),
-    path('work-category-upload-document-required/deactivate/<int:id>/', WorkCategoryUploadDocumentRequiredDeactivateAPIView.as_view(),
+    path('work-category-output-document/deactivate/<int:id>/', WorkCategoryUploadDocumentRequiredDeactivateAPIView.as_view(),
          name='work_category_upload_document_required_deactivate'),
 
     path('client-work-category-assignment/create/', ClientWorkCategoryAssignmentCreateView.as_view(), name='client_work_category_assignment_create'),

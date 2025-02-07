@@ -284,8 +284,9 @@ class WorkCategoryFilesRequiredCreateAPIView(ModifiedApiview):
 
 
 class WorkCategoryFilesRequiredGetAPIView(ModifiedApiview):
-    def get(self, request, id=None):
+    def get(self, request):
         try:
+            id = request.GET.get("id", None)
             user = self.get_user_from_token(request)
             if id:
                 work_category_files = WorkCategoryFilesRequired.objects.filter(id=id, is_active=True).first()
@@ -366,8 +367,9 @@ class WorkCategoryActivityListCreateAPIView(ModifiedApiview):
 
 
 class WorkCategoryActivityListGetAPIView(ModifiedApiview):
-    def get(self, request, id=None):
+    def get(self, request):
         try:
+            id = request.GET.get("id", None)
             user = self.get_user_from_token(request)
             if id:
                 work_category = WorkCategoryActivityList.objects.filter(id=id, is_active=True).first()
@@ -451,8 +453,9 @@ class WorkCategoryActivityStagesCreateAPIView(ModifiedApiview):
 
 
 class WorkCategoryActivityStagesGetAPIView(ModifiedApiview):
-    def get(self, request, id=None):
+    def get(self, request):
         try:
+            id = request.GET.get("id", None)
             user = self.get_user_from_token(request)
             if id:
                 work_category = WorkCategoryActivityStages.objects.filter(id=id, is_active=True).first()
@@ -461,12 +464,12 @@ class WorkCategoryActivityStagesGetAPIView(ModifiedApiview):
                 data = {
                     "id": work_category.id,
                     "activity_stage": work_category.activity_stage,
-                    "work_category": work_category.work_category.name,
                     "description": work_category.description,
+                    "work_category": work_category.work_category.name,
                 }
                 return Response(data, status=status.HTTP_200_OK)
             work_categories = WorkCategoryActivityStages.objects.filter(is_active=True).values("id", "activity_stage", 
-                     "work_category")
+                    "description", "work_category")
             return Response(list(work_categories), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -534,8 +537,9 @@ class WorkCategoryUploadDocumentRequiredCreateAPIView(ModifiedApiview):
 
 
 class WorkCategoryUploadDocumentRequiredGetAPIView(ModifiedApiview):
-    def get(self, request, id=None):
+    def get(self, request):
         try:
+            id = request.GET.get("id")
             user = self.get_user_from_token(request)
             if id:
                 work_category = WorkCategoryUploadDocumentRequired.objects.filter(id=id, is_active=True).first()
