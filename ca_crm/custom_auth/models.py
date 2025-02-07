@@ -82,7 +82,7 @@ class CustomUser(models.Model):
         return check
     
 class EmployeeProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True)
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True, related_name="employee_profile")
     date_of_joining = models.DateField(null=True, blank=True)
     date_of_leaving = models.DateField(null=True, blank=True)
     referred_by = models.CharField(max_length=150, null=True, blank=True)
@@ -96,7 +96,7 @@ class EmployeeProfile(models.Model):
     
 
 class ReportingUser(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True)
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True, related_name="reporting_details")
     reporting_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='reportees')
     working_under = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='subordinates')
     is_active = models.BooleanField(default=True)

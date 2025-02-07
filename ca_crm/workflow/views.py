@@ -54,7 +54,7 @@ class DepartmentCreateAPIView(ModifiedApiview):
                 return Response({"error": "Name is required"}, status=status.HTTP_400_BAD_REQUEST)
 
             if manager:
-                manager_details = CustomUser.objects.filter(id=manager, is_active=True)
+                manager_details = CustomUser.objects.filter(id=manager, is_active=True).first()
             else:
                 manager_details = None
 
@@ -99,7 +99,7 @@ class DepartmentUpdateAPIView(ModifiedApiview):
             data = request.data
             manager = data.get("manager")
             if manager:
-                manager_details = CustomUser.objects.filter(id=manager, is_active=True)
+                manager_details = CustomUser.objects.filter(id=manager, is_active=True).first()
             else:
                 manager_details = department.manager
             department.name = data.get("name", department.name)
