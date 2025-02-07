@@ -60,7 +60,7 @@ class DepartmentCreateAPIView(ModifiedApiview):
 
             department = Department.objects.create(
                 name=name,
-                created_by_id=user,
+                created_by=user,
                 manager=manager_details
             )
             return Response({"message": "Department created", "id": department.id}, status=status.HTTP_201_CREATED)
