@@ -113,6 +113,49 @@ class CreateEmployeeView(APIView):
             )
 
 
+class EmployeeListView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        # Fetch Employee data with related user and reporting details
+        employees = EmployeeProfile.objects.select_related('user').filter(is_active=True, user__is_active=True)
+        reporting_data = ReportingUser.objects.select_related('user', 'reporting_to', 'working_under').filter(is_active=True, user__is_active=True)
+
+        # Convert QuerySets to lists of dictionaries
+        employee_data = [
+            {
+                "employee_name": emp.user.username,
+                "designation": emp.designation,
+                "email": emp.user.email,
+                "phone": emp.user.phone_number,
+            }
+            for emp in employees
+        ]
+
+        reporting_dict = {
+            rep.user.id: {
+                "reporting_to": rep.reporting_to.username if rep.reporting_to else None,
+                "working_under": rep.working_under.username if rep.working_under else None,
+            }
+            for rep in reporting_data
+        }
+
+        # Convert to DataFrame for fast processing
+        df_employees = pd.DataFrame(employee_data)
+        df_reporting = pd.DataFrame.from_dict(reporting_dict, orient="index").reset_index().rename(columns={"index": "user_id"})
+
+        # Merge DataFrames
+        df_merged = pd.merge(df_employees, df_reporting, how="left", left_on="employee_name", right_on="user_id")
+        df_merged.drop(columns=["user_id"], inplace=True)
+
+        # Replace NaN values with None
+        df_merged.fillna("", inplace=True)
+
+        # Convert to list of dicts for JSON response
+        response_data = df_merged.to_dict(orient="records")
+
+        return Response({"employees": response_data}, status=status.HTTP_200_OK)
+
+
 class RetrieveEmployeeView(APIView):
     permission_classes = [IsAuthenticated]
 

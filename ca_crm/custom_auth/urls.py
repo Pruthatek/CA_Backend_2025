@@ -21,6 +21,7 @@ from .views import (
     RetrieveEmployeeView,
     LoginView,
     AssignRoleView,
+    EmployeeListView,
     CheckPermissionView,
     RoleCreateAPIView,
     RoleListAPIView,
@@ -39,6 +40,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('create-user/', CreateEmployeeView.as_view(), name='create-employee'),
+    path('get-user/', EmployeeListView.as_view(), name='get-employee'),
     path('retrieve-user/<int:user_id>/', RetrieveEmployeeView.as_view(), name='retrieve-employee'),
     path('login/', LoginView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
