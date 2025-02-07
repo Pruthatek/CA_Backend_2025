@@ -123,6 +123,7 @@ class EmployeeListView(APIView):
         # Convert QuerySets to lists of dictionaries
         employee_data = [
             {
+                "employee_id":emp.user.id,
                 "employee_name": emp.user.username,
                 "designation": emp.designation,
                 "email": emp.user.email,
