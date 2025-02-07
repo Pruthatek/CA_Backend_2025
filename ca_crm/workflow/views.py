@@ -21,6 +21,11 @@ from django.conf import settings
 from custom_auth.models import CustomUser
 from clients.models import Customer
 from django.db import transaction
+import os
+import uuid
+from django.core.files.storage import FileSystemStorage
+import posixpath
+
 
 class ModifiedApiview(APIView):
     permission_classes = [IsAuthenticated]
@@ -43,13 +48,20 @@ class DepartmentCreateAPIView(ModifiedApiview):
             user = self.get_user_from_token(request)
             data = request.data
             name = data.get("name")
+            manager = data.get("manager")
 
             if not name:
                 return Response({"error": "Name is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+            if manager:
+                manager_details = CustomUser.objects.filter(id=manager, is_active=True)
+            else:
+                manager_details = None
+
             department = Department.objects.create(
                 name=name,
-                created_by_id=user
+                created_by_id=user,
+                manager=manager_details
             )
             return Response({"message": "Department created", "id": department.id}, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -66,7 +78,8 @@ class DepartmentGetAPIView(ModifiedApiview):
                     return Response({"error": "Department not found"}, status=status.HTTP_404_NOT_FOUND)
                 data = {
                     "id": department.id,
-                    "name": department.name
+                    "name": department.name,
+                    "manager":department.manager.username
                 }
                 return Response(data, status=status.HTTP_200_OK)
             departments = Department.objects.filter(is_active=True).values("id", "name")
@@ -84,8 +97,14 @@ class DepartmentUpdateAPIView(ModifiedApiview):
                 return Response({"error": "Department not found"}, status=status.HTTP_404_NOT_FOUND)
 
             data = request.data
+            manager = data.get("manager")
+            if manager:
+                manager_details = CustomUser.objects.filter(id=manager, is_active=True)
+            else:
+                manager_details = department.manager
             department.name = data.get("name", department.name)
             department.updated_by = user
+            department.manager = manager_details
             department.updated_date = datetime.now()
             department.save()
 
@@ -604,7 +623,7 @@ def assign_activities_and_files(assignment, work_category):
         return False
 
 
-class ClientWorkCategoryAssignmentCreateView(APIView):
+class ClientWorkCategoryAssignmentCreateView(ModifiedApiview):
     def post(self, request):
         data = request.data
         try:
@@ -688,7 +707,7 @@ class ClientWorkCategoryAssignmentCreateView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ClientWorkCategoryAssignmentListView(APIView):
+class ClientWorkCategoryAssignmentListView(ModifiedApiview):
     def get(self, request):
         try:
             assignments = ClientWorkCategoryAssignment.objects.filter(is_active=True)
@@ -711,7 +730,7 @@ class ClientWorkCategoryAssignmentListView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ClientWorkCategoryAssignmentRetrieveView(APIView):
+class ClientWorkCategoryAssignmentRetrieveView(ModifiedApiview):
     def get(self, request, assignment_id):
         try:
             assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
@@ -726,16 +745,16 @@ class ClientWorkCategoryAssignmentRetrieveView(APIView):
                 "review_by": assignment.review_by.username if assignment.review_by else "",
                 "start_date": assignment.start_date,
                 "completion_date": assignment.completion_date,
-                "required_files": list(assignment.required_files.values("file_name", "file_path")),
-                "activities": list(assignment.activities.values("activity", "assigned_percentage", "status")),
-                "output_files": list(assignment.output_files.values("file_name", "file_path")),
+                "required_files": list(assignment.required_files.values("file_name", "file_path", "id")),
+                "activities": list(assignment.activities.values("activity", "assigned_percentage", "status", "id")),
+                "output_files": list(assignment.output_files.values("file_name", "file_path", "id")),
             }
             return Response(data, status=status.HTTP_200_OK)
         except ClientWorkCategoryAssignment.DoesNotExist:
             return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
-class ClientWorkCategoryAssignmentUpdateView(APIView):
+class ClientWorkCategoryAssignmentUpdateView(ModifiedApiview):
     def put(self, request, assignment_id):
         try:
             assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
@@ -762,7 +781,7 @@ class ClientWorkCategoryAssignmentUpdateView(APIView):
             return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
-class ClientWorkCategoryAssignmentDeleteView(APIView):
+class ClientWorkCategoryAssignmentDeleteView(ModifiedApiview):
     def delete(self, request, assignment_id):
         try:
             assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
@@ -774,7 +793,141 @@ class ClientWorkCategoryAssignmentDeleteView(APIView):
             return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
-class AssignTaskView(APIView):
+class SubmitClientWorkRequiredFiles(ModifiedApiview):
+    def put(self, request, assignment_id):
+        try:
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
+            data = request.data
+            for file_data in data.get("required_files", []):
+                assigned_file = AssignedWorkRequiredFiles.objects.get(id=file_data.get("id"), is_active=True)
+                attachment_file = file_data.get("file")
+                if attachment_file:
+                    ext = os.path.splitext(attachment_file)[1]
+                    short_unique_filename = f"{uuid.uuid4().hex}{ext}"
+                    fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'requiredfiles'))
+                    logo_path = fs.save(short_unique_filename, attachment_file)
+                    attachments_url = posixpath.join('media/invoice_attachments', logo_path)
+                else:
+                    attachments_url = None
+                assigned_file.file_path = attachments_url
+                assigned_file.save()
+
+            return Response({"message": "Assignment updated successfully"}, status=status.HTTP_200_OK)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SubmitClientWorkActivityList(ModifiedApiview):
+    def put(self, request, assignment_id):
+        try:
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
+            data = request.data
+            for file_data in data.get("required_files", []):
+                assigned_file = AssignedWorkActivity.objects.get(id=file_data.get("id"), is_active=True)
+                assigned_file.status = file_data.get("status")
+                assigned_file.note = file_data.get("note")
+                assigned_file.save()
+
+            return Response({"message": "Assignment updated successfully"}, status=status.HTTP_200_OK)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SubmitClientWorkActivityStage(ModifiedApiview):
+    def put(self, request, assignment_id):
+        try:
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
+            data = request.data
+            for file_data in data.get("required_files", []):
+                assigned_file = AssignedWorkActivityStages.objects.get(id=file_data.get("id"), is_active=True)
+                assigned_file.status = file_data.get("status")
+                assigned_file.note = file_data.get("note")
+                assigned_file.save()
+
+            return Response({"message": "Assignment updated successfully"}, status=status.HTTP_200_OK)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SubmitClientWorkOutputFiles(ModifiedApiview):
+    def put(self, request, assignment_id):
+        try:
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
+            data = request.data
+            for file_data in data.get("required_files", []):
+                assigned_file = AssignedWorkOutputFiles.objects.get(id=file_data.get("id"), is_active=True)
+                attachment_file = file_data.get("file")
+                if attachment_file:
+                    ext = os.path.splitext(attachment_file)[1]
+                    short_unique_filename = f"{uuid.uuid4().hex}{ext}"
+                    fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'requiredfiles'))
+                    logo_path = fs.save(short_unique_filename, attachment_file)
+                    attachments_url = posixpath.join('media/invoice_attachments', logo_path)
+                else:
+                    attachments_url = None
+                assigned_file.file_path = attachments_url
+                assigned_file.save()
+
+            return Response({"message": "Assignment updated successfully"}, status=status.HTTP_200_OK)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SubmitClientWorkAdditionalActivity(ModifiedApiview):
+    def put(self, request, assignment_id):
+        try:
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
+            data = request.data
+            for file_data in data.get("required_files", []):
+                assigned_file = AssignedWorkActivity.objects.create(activity=file_data.get("activity"),
+                                        assignment=assignment, 
+                                        status=file_data.get("status"),
+                                        note=file_data.get("note"),
+                                        is_active=True)
+
+            return Response({"message": "Assignment updated successfully", "id":assigned_file.id}, status=status.HTTP_200_OK)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SubmitClientWorkAdditionalFiles(ModifiedApiview):
+    def put(self, request, assignment_id):
+        try:
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
+            data = request.data
+            for file_data in data.get("required_files", []):
+                attachment_file = file_data.get("file")
+                if attachment_file:
+                    ext = os.path.splitext(attachment_file)[1]
+                    short_unique_filename = f"{uuid.uuid4().hex}{ext}"
+                    fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'requiredfiles'))
+                    logo_path = fs.save(short_unique_filename, attachment_file)
+                    attachments_url = posixpath.join('media/invoice_attachments', logo_path)
+                else:
+                    attachments_url = None
+                assigned_file = AssignedWorkOutputFiles.objects.create(file_name=file_data.get("file_name"),
+                    assignment=assignment,
+                    file_path=attachments_url,
+                    is_active=True)
+
+            return Response({"message": "Assignment updated successfully", "id":assigned_file.id}, status=status.HTTP_200_OK)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AssignTaskView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -833,7 +986,7 @@ class AssignTaskView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class EditAssignedTaskView(APIView):
+class EditAssignedTaskView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, assignment_id):
@@ -881,7 +1034,7 @@ class EditAssignedTaskView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class DeleteAssignedTaskView(APIView):
+class DeleteAssignedTaskView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, assignment_id):
@@ -895,7 +1048,7 @@ class DeleteAssignedTaskView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class RetrieveAssignedTaskView(APIView):
+class RetrieveAssignedTaskView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, assignment_id=None):
@@ -935,7 +1088,7 @@ class RetrieveAssignedTaskView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class RetrieveAssignedTaskByUserView(APIView):
+class RetrieveAssignedTaskByUserView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
@@ -964,7 +1117,7 @@ class RetrieveAssignedTaskByUserView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
 
-class RetrieveAssignedTaskByReviewByView(APIView):
+class RetrieveAssignedTaskByReviewByView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
@@ -993,7 +1146,7 @@ class RetrieveAssignedTaskByReviewByView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SubmitReviewByView(APIView):
+class SubmitReviewByView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, assignment_id):

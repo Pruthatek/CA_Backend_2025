@@ -6,6 +6,8 @@ from clients.models import Customer
 class Department(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    manager = models.ForeignKey(CustomUser, 
+            on_delete=models.SET_NULL, null=True, related_name="departments_manager")
     created_by = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, related_name="departments_created"
     )
@@ -121,6 +123,7 @@ class ClientWorkCategoryAssignment(models.Model):
                         ("payment_received", "Payment Received"),
                         ("task_closed", "Task Closed")]
     priority_choices = [(1, "Low"), (2, "Medium"), (3, "High"), (4, "Urgent")]
+    status_choices = [("wip_task", "WIP Task"), ("overdue", "Overdue"), ("closed", "Closed")]
     assignment_id = models.AutoField(primary_key=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="work_category_customer")
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="assignments")
@@ -163,6 +166,7 @@ class AssignedWorkActivity(models.Model):
     activity = models.CharField(max_length=100, null=True, blank=True)
     assigned_percentage = models.FloatField(blank=True, null=True)
     status = models.CharField(max_length=100, choices=status_choices, default="pending")
+    note = models.CharField(max_length=100, null=True, blank=True)
     start_date = models.DateField(blank=True, null=True)
     completion_date = models.DateField(blank=True, null=True)
     updated_date = models.DateTimeField(auto_now=True)

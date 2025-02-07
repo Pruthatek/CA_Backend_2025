@@ -28,6 +28,13 @@ from .views import (
     ClientWorkCategoryAssignmentDeleteView,
     ClientWorkCategoryAssignmentListView,
 
+    SubmitClientWorkRequiredFiles,
+    SubmitClientWorkActivityList,
+    SubmitClientWorkActivityStage,
+    SubmitClientWorkOutputFiles,
+    SubmitClientWorkAdditionalActivity,
+    SubmitClientWorkAdditionalFiles,
+
 )
 
 urlpatterns = [
@@ -67,4 +74,10 @@ urlpatterns = [
     path('client-work-category-assignment/update/<int:assignment_id>/', ClientWorkCategoryAssignmentUpdateView.as_view(), name='client_work_category_assignment_update'),
     path('client-work-category-assignment/delete/<int:assignment_id>/', ClientWorkCategoryAssignmentDeleteView.as_view(), name='client_work_category_assignment_delete'),
     
+    path('submit-client-work/required-files/<int:assignment_id>/', SubmitClientWorkRequiredFiles.as_view(), name="submit-client-work-required-files"),
+    path('submit-client-work/activity-list/<int:assignment_id>/', SubmitClientWorkActivityList.as_view(), name="submit-client-work-activity-list"),
+    path('submit-client-work/activity-stage/<int:assignment_id>/', SubmitClientWorkActivityStage.as_view(), name="submit-client-work-activity-stage"),
+    path('submit-client-work/output-files/<int:assignment_id>/', SubmitClientWorkOutputFiles.as_view(), name="submit-client-work-required-files"),
+    path('submit-client-work/additional-files/<int:assignment_id>/', SubmitClientWorkAdditionalFiles.as_view(), name="submit-client-work-additional-files"),
+    path('submit-client-work/additional-activity/<int:assignment_id>/', SubmitClientWorkAdditionalActivity.as_view(), name="submit-client-work-additional-activities"),
 ]
