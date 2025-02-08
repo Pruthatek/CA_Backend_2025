@@ -72,7 +72,7 @@ urlpatterns = [
     path('work-category-activity-list/update/<int:id>/', WorkCategoryActivityListUpdateAPIView.as_view(), name='work_category_activity_list_update'),
     path('work-category-activity-list/deactivate/<int:id>/', WorkCategoryActivityListDeactivateAPIView.as_view(), name='work_category_activity_list_deactivate'),
     
-    path('work-category-activity-stage/create/', WorkCategoryActivityListCreateAPIView.as_view(), name='work_category_activity_stage_create'),
+    path('work-category-activity-stage/create/', WorkCategoryActivityStagesCreateAPIView.as_view(), name='work_category_activity_stage_create'),
     path('work-category-activity-stage/get/', WorkCategoryActivityStagesGetAPIView.as_view(), name='work_category_activity_stage_get'),
     path('work-category-activity-stage/update/<int:id>/', WorkCategoryActivityStagesUpdateAPIView.as_view(), name='work_category_activity_stage_update'),
     path('work-category-activity-stage/deactivate/<int:id>/', WorkCategoryActivityStagesDeactivateAPIView.as_view(), name='work_category_activity_stage_deactivate'),
