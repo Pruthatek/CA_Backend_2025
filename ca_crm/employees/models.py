@@ -2,7 +2,7 @@ from django.db import models
 from custom_auth.models import CustomUser, EmployeeProfile
 from datetime import datetime, timedelta
 from clients.models import Customer
-from workflow.models import ClientWorkCategoryAssignment
+from workflow.models import ClientWorkCategoryAssignment, AssignedWorkActivity
 # Create your models here.
 
 class EmployeeAttendance(models.Model):
@@ -60,21 +60,22 @@ class Holiday(models.Model):
 class TimeTracking(models.Model):
     TASK_TYPE_CHOICES = (
         ('billable', 'Billable'),
-        ('non_billable', 'Non Billable'),
-        ('na','NA')
+        ('non_billable', 'Non Billable')
     )
     employee = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name="time_entries"
     )
     client = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name="time_on_client")
     work = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.SET_NULL, null=True, related_name="time_for_work")
-    task_type = models.CharField(max_length=20, choices=TASK_TYPE_CHOICES, default="na")
+    work_activity = models.ForeignKey(AssignedWorkActivity, on_delete=models.SET_NULL, null=True, related_name="time_for_activity")
+    task_type = models.CharField(max_length=20, choices=TASK_TYPE_CHOICES, default="non_billable")
     date = models.DateField()
     start_time = models.TimeField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
     task_description = models.CharField(max_length=200, null=True, blank=True)
     duration = models.DurationField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_approved = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-date', 'start_time']
@@ -89,4 +90,4 @@ class TimeTracking(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.employee.user.username} - {self.date} ({self.task_type})"
+        return f"{self.employee.username} - {self.date} ({self.task_type})"
