@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'workflow',
     'clients',
     'employees',
+    'dcs'
 ]
 
 MIDDLEWARE = [
