@@ -9,6 +9,11 @@ from .views import (
     InwardRetrieveView,
     InwardUpdateView,
     InwardDeleteView,
+    OutwardCreateView,
+    OutwardListView,
+    OutwardRetrieveView,
+    OutwardUpdateView,
+    OutwardDeleteView,
 )
 
 urlpatterns = [
@@ -22,4 +27,10 @@ urlpatterns = [
     path('inward/retrieve/<int:id>/', InwardRetrieveView.as_view(), name='inward-retrieve'),
     path('inward/update/<int:pk>/', InwardUpdateView.as_view(), name='inward-update'),
     path('inward/delete/<int:pk>/', InwardDeleteView.as_view(), name='inward-delete'),
+
+    path('outward/create/', OutwardCreateView.as_view(), name='outward-create'),
+    path('outward/', OutwardListView.as_view(), name='outward-retrieve'),
+    path('outward/retrieve/<int:pk>/', OutwardRetrieveView.as_view(), name='outward-retrieve'),
+    path('outward/update/<int:pk>/', OutwardUpdateView.as_view(), name='outward-update'),
+    path('outward/delete/<int:pk>/', OutwardDeleteView.as_view(), name='outward-delete'),
 ]  

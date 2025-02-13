@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Location, Inward
+from .models import Location, Inward, Outward
 from custom_auth.models import CustomUser
 from clients.models import Customer
 import uuid
@@ -424,6 +424,264 @@ class InwardDeleteView(ModifiedApiview):
             # Return a success response
             return Response(
                 {"message": "Inward deleted successfully."},
+                status=status.HTTP_204_NO_CONTENT
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+
+class OutwardCreateView(ModifiedApiview):
+    def post(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Extract data from the request
+            customer_id = request.data.get('customer')
+            outward_reference = request.data.get('outward_reference')
+            inward_id = request.data.get('inward', None)
+            company = request.data.get('company')
+            outward_title = request.data.get('outward_title')
+            about_outward = request.data.get('about_outward')
+            outward_through = request.data.get('outward_through')
+            outward_date = request.data.get('outward_date')
+            avb_no = request.data.get('avb_no', None)
+            courier_name = request.data.get('courier_name', None)
+            name_of_person = request.data.get('name_of_person', None)
+
+            # Validate required fields
+            if not all([customer_id, outward_reference, company, outward_title, about_outward, outward_through, outward_date]):
+                return Response(
+                    {"error": "All fields are required except inward (if outward_reference is non-inward-entry)."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+
+            if outward_through not in ["hand_over_to_client", "sent_via_office_boy", "by_courier"]:
+                return Response({"error":"Outward through option incorrect"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if outward_through == "by_courier" and not avb_no or not courier_name:
+                return Response({"error":"AVB no and Courier name is required in case of sent through courier"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if outward_through in ["hand_over_to_client", "sent_via_office_boy"] and not name_of_person:
+                return Response({"error":"person name is required in case of out ward given to client or send via office boy"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+            # Fetch related objects
+            customer = get_object_or_404(Customer, id=customer_id)
+            inward = get_object_or_404(Inward, id=inward_id) if outward_reference == 'inward-entry' and inward_id else None
+
+            # Create the Outward object
+            outward_obj = Outward.objects.create(
+                customer=customer,
+                outward_reference=outward_reference,
+                inward=inward,
+                company=company,
+                outward_title=outward_title,
+                about_outward=about_outward,
+                outward_through=outward_through,
+                outward_date=outward_date,
+                avb_no=avb_no,
+                courier_name=courier_name,
+                name_of_person=name_of_person,
+                created_by=user,
+                modified_by=user,
+            )
+
+            # Return the created object as a response
+            return Response(
+                {
+                    "id": outward_obj.id,
+                    "customer": outward_obj.customer.id,
+                    "outward_reference": outward_obj.outward_reference,
+                    "inward": outward_obj.inward.id if outward_obj.inward else None,
+                    "company": outward_obj.company,
+                    "outward_title": outward_obj.outward_title,
+                    "about_outward": outward_obj.about_outward,
+                    "outward_through": outward_obj.outward_through,
+                    "outward_date": outward_obj.outward_date,
+                    },
+                status=status.HTTP_201_CREATED
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class OutwardListView(ModifiedApiview):
+    def get(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch the Outward object
+            outward_list = []
+            outward_obj = Outward.objects.all()
+            for outward in outward_obj:
+                outward_list.append({
+                    "id": outward.id,
+                    "customer": outward.customer.id,
+                    "outward_reference": outward.outward_reference,
+                    "inward": outward.inward.id if outward.inward else None,
+                    "company": outward.company,
+                    "outward_title": outward.outward_title,
+                    "about_outward": outward.about_outward,
+                    "outward_through": outward.outward_through,
+                    "outward_date": outward.outward_date,
+                    "avb_no": outward.avb_no,
+                    "courier_name": outward.courier_name,
+                    "name_of_person": outward.name_of_person,
+                })
+            # Return the object as a response
+            return Response({"outward-data":outward_list}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class OutwardRetrieveView(ModifiedApiview):
+    def get(self, request, pk):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch the Outward object
+            outward_obj = get_object_or_404(Outward, id=pk)
+
+            # Return the object as a response
+            return Response(
+                {
+                    "id": outward_obj.id,
+                    "customer": outward_obj.customer.id,
+                    "outward_reference": outward_obj.outward_reference,
+                    "inward": outward_obj.inward.id if outward_obj.inward else None,
+                    "company": outward_obj.company,
+                    "outward_title": outward_obj.outward_title,
+                    "about_outward": outward_obj.about_outward,
+                    "outward_through": outward_obj.outward_through,
+                    "outward_date": outward_obj.outward_date,
+                    "avb_no": outward_obj.avb_no,
+                    "courier_name": outward_obj.courier_name,
+                    "name_of_person": outward_obj.name_of_person,
+                    "created_by": outward_obj.created_by.id,
+                    "modified_by": outward_obj.modified_by.id,
+                    "created_date": outward_obj.created_date,
+                    "modified_date": outward_obj.modified_date
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class OutwardUpdateView(ModifiedApiview):
+    def put(self, request, pk):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch the Outward object
+            outward_obj = get_object_or_404(Outward, id=pk)
+
+            # Extract data from the request
+            outward_through = request.data.get('outward_through', outward_obj.outward_through)
+            avb_no = request.data.get('avb_no', outward_obj.avb_no)
+            courier_name = request.data.get('courier_name', outward_obj.courier_name)
+            name_of_person = request.data.get('name_of_person', outward_obj.name_of_person)
+
+            # Validate outward_through logic
+            if outward_through not in ["hand_over_to_client", "sent_via_office_boy", "by_courier"]:
+                return Response({"error": "Outward through option incorrect"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if outward_through == "by_courier" and (not avb_no or not courier_name):
+                return Response({"error": "AVB no and Courier name are required in case of sent through courier"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if outward_through in ["hand_over_to_client", "sent_via_office_boy"] and not name_of_person:
+                return Response({"error": "Person name is required in case of outward given to client or sent via office boy"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Update fields if provided in the request
+            outward_obj.customer = get_object_or_404(Customer, id=request.data.get('customer', outward_obj.customer.id))
+            outward_obj.outward_reference = request.data.get('outward_reference', outward_obj.outward_reference)
+            outward_obj.company = request.data.get('company', outward_obj.company)
+            outward_obj.outward_title = request.data.get('outward_title', outward_obj.outward_title)
+            outward_obj.about_outward = request.data.get('about_outward', outward_obj.about_outward)
+            outward_obj.outward_through = outward_through
+            outward_obj.outward_date = request.data.get('outward_date', outward_obj.outward_date)
+            outward_obj.avb_no = avb_no
+            outward_obj.courier_name = courier_name
+            outward_obj.name_of_person = name_of_person
+
+            # Update inward if outward_reference is 'inward-entry'
+            if outward_obj.outward_reference == 'inward-entry':
+                inward_id = request.data.get('inward')
+                if inward_id:
+                    outward_obj.inward = get_object_or_404(Inward, id=inward_id)
+            else:
+                outward_obj.inward = None
+
+            # Update modified_by and save
+            outward_obj.modified_by = user
+            outward_obj.save()
+
+            # Return the updated object as a response
+            return Response(
+                {
+                    "id": outward_obj.id,
+                    "customer": outward_obj.customer.id,
+                    "outward_reference": outward_obj.outward_reference,
+                    "inward": outward_obj.inward.id if outward_obj.inward else None,
+                    "company": outward_obj.company,
+                    "outward_title": outward_obj.outward_title,
+                    "about_outward": outward_obj.about_outward,
+                    "outward_through": outward_obj.outward_through,
+                    "outward_date": outward_obj.outward_date,
+                    "avb_no": outward_obj.avb_no,
+                    "courier_name": outward_obj.courier_name,
+                    "name_of_person": outward_obj.name_of_person,
+                    "created_by": outward_obj.created_by.id,
+                    "modified_by": outward_obj.modified_by.id,
+                    "created_date": outward_obj.created_date,
+                    "modified_date": outward_obj.modified_date
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class OutwardDeleteView(ModifiedApiview):
+    def delete(self, request, pk):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch the Outward object
+            outward_obj = get_object_or_404(Outward, id=pk)
+
+            # Delete the object
+            outward_obj.delete()
+
+            # Return a success response
+            return Response(
+                {"message": "Outward deleted successfully."},
                 status=status.HTTP_204_NO_CONTENT
             )
         except Exception as e:

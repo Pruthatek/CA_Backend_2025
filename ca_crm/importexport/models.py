@@ -66,3 +66,64 @@ class Inward(models.Model):
     def __str__(self):
         return self.inward_title
 
+
+class Outward(models.Model):
+    # Choices for Outward Reference
+    OUTWARD_REFERENCE_CHOICES = [
+        ('non-inward-entry', 'Non-Inward Entry'),
+        ('inward-entry', 'Inward Entry'),
+    ]
+    OUTWARD_THROUGH_CHOICES = [
+        ('by_courier', 'By Courier'),
+        ('hand_over_to_client', 'Hand over to client in-person'),
+        ('sent_via_office_boy', 'Sent Via Office Boy'),
+    ]
+
+    # Customer field (Foreign Key)
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        verbose_name="Customer",
+        related_name='outward_customer'
+    )
+    outward_reference = models.CharField(
+        max_length=50,
+        choices=OUTWARD_REFERENCE_CHOICES,
+        verbose_name="Outward Reference"
+    )
+    inward = models.ForeignKey(
+        Inward,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name="Inward Entry",
+        related_name='outward_inward'
+    )
+    company = models.CharField(max_length=100, verbose_name="Company")
+    outward_title = models.CharField(max_length=120, verbose_name="Outward Title")
+    about_outward = models.TextField(verbose_name="About Outward")
+    outward_through = models.CharField(max_length=100, choices=OUTWARD_THROUGH_CHOICES, verbose_name="Outward Through")
+    # in case of courier
+    avb_no = models.CharField(max_length=100, blank=True, null=True)
+    courier_name = models.CharField(max_length=100, blank=True, null=True)
+    # in other two cases
+    name_of_person = models.CharField(max_length=100, blank=True, null=True)
+    
+    outward_date = models.DateField(verbose_name="Outward Date")
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='outward_created',
+        verbose_name="Created By"
+    )
+    created_date = models.DateTimeField(auto_now_add=True, verbose_name="Created Date")
+    modified_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='outward_modified',
+        verbose_name="Modified By"
+    )
+    modified_date = models.DateTimeField(auto_now=True, verbose_name="Modified Date")
+
+    def __str__(self):
+        return self.outward_title
