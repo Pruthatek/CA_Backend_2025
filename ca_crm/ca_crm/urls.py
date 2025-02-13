@@ -25,5 +25,6 @@ urlpatterns = [
     path('clients/', include('clients.urls')),
     path('employees/', include('employees.urls')),
     path('dcs/', include('dcs.urls')),
+    path('documents/', include('importexport.urls')),
     
 ]

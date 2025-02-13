@@ -46,6 +46,8 @@ class DepartmentCreateAPIView(ModifiedApiview):
     def post(self, request):
         try:
             user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error":"You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
             data = request.data
             name = data.get("name")
             manager = data.get("manager")
@@ -725,7 +727,9 @@ class ClientWorkCategoryAssignmentListView(ModifiedApiview):
                     "assigned_by": assignment.assigned_by.username if assignment.assigned_by else "",
                     "review_by": assignment.review_by.username if assignment.review_by else "",
                     "progress": assignment.progress,
+                    "progress_display": assignment.get_progress_display(),
                     "priority": assignment.priority,
+                    "priority_display": assignment.get_priority_display(),
                     "start_date": assignment.start_date,
                     "completion_date": assignment.completion_date,
                 })
