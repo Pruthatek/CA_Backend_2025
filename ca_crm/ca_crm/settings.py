@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'employees',
     'dsc',
     'importexport',
+    'expense',
 ]
 
 MIDDLEWARE = [
