@@ -84,8 +84,8 @@ class TimeTracking(models.Model):
         # Optionally compute duration if start_time and end_time are provided
         if self.start_time and self.end_time:
             import datetime
-            start = datetime.datetime.combine(self.date, self.start_time)
-            end = datetime.datetime.combine(self.date, self.end_time)
+            start = self.start_time
+            end = self.end_time
             self.duration = end - start
         super().save(*args, **kwargs)
 
