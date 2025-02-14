@@ -167,6 +167,7 @@ class RetrieveDSCView(ModifiedApiview):
         try:            
             customer = CustomerDcs.objects.get(id=id)
             customer_data = {
+                "dsc_id": customer.id,
                 'customer_id':customer.customer.id,
                 'customer_name':customer.customer.name_of_business,
                 "pan_no": customer.pan_no,
@@ -196,6 +197,7 @@ class ListDSCView(ModifiedApiview):
             customers = CustomerDcs.objects.all()
             customer_list = [
                 {
+                    "dsc_id":customer.id,
                     'customer_id':customer.customer.id,
                     'customer_name':customer.customer.name_of_business,
                     "pan_no": customer.pan_no,
