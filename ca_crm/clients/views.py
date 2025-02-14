@@ -148,7 +148,11 @@ class CustomerListAPIView(APIView):
                 "pan_no",
                 "enable_account",
                 "accountant_name",
-                "accountant_phone"
+                "accountant_phone",
+                "dsc",
+                "file_no",
+                "created_date"
+
             )
             logger.info("Successfully retrieved all active customers")
             return Response(list(customers))
