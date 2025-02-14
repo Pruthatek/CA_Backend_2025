@@ -24,7 +24,7 @@ urlpatterns = [
     path('workflow/', include('workflow.urls')),
     path('clients/', include('clients.urls')),
     path('employees/', include('employees.urls')),
-    path('dcs/', include('dcs.urls')),
+    path('dsc/', include('dsc.urls')),
     path('documents/', include('importexport.urls')),
     
 ]

@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 import json
-from .models import CustomerDcs
+from .models import CustomerDcs, DSCUse
 from workflow.views import ModifiedApiview
 import pandas as pd
 
@@ -213,5 +213,38 @@ class ListDSCView(ModifiedApiview):
             ]
             return Response(customer_list, status=status.HTTP_200_OK)
         
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CreateDSCUseView(ModifiedApiview):
+    def post(self, request, *args, **kwargs):
+        try:
+            # Parse JSON data from the request body
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error":"You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            data = json.loads(request.body)
+
+            # Validate required fields
+            required_fields = ['dsc_id', 'customer_name', 'pan_no', 'usage_purpose']
+            for field in required_fields:
+                if field not in data:
+                    return Response({"error": f"{field} is required."}, status=status.HTTP_400_BAD_REQUEST) 
+            # Get the user creating the entry
+            created_by = user
+            # dsc_data = CustomerDcs.objects.get(id=dat)
+            # Create the DSC entry
+            customer = DSCUse(
+                dsc_id=data.get("dsc_id"),
+                customer_name=data['customer_namename'],
+                pan_no=data['pan_no'],
+                usage_purpose=data['usage_purpose'],
+                created_by=created_by,
+            )
+            customer.save()
+
+            return Response({"message": "DSC usage entry created successfully.", "id": customer.id}, status=status.HTTP_201_CREATED)
+
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

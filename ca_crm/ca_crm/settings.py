@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'workflow',
     'clients',
     'employees',
-    'dcs',
+    'dsc',
     'importexport',
 ]
 
