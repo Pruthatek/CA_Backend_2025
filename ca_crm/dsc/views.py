@@ -237,7 +237,7 @@ class CreateDSCUseView(ModifiedApiview):
             # Create the DSC entry
             customer = DSCUse(
                 dsc_id=data.get("dsc_id"),
-                customer_name=data['customer_namename'],
+                customer_name=data['customer_name'],
                 pan_no=data['pan_no'],
                 usage_purpose=data['usage_purpose'],
                 created_by=created_by,
