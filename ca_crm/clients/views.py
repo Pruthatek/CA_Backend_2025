@@ -131,6 +131,24 @@ class CustomerListAPIView(APIView):
                 "city",
                 "state",
                 "country",
+                "pin",
+                "contact_number",
+                "email",
+                "mobile",
+                "additional_contact_number",
+                "secondary_email_id",
+                "gst_no",
+                "gst_state_code",
+                "cin_number",
+                "llipin_number",
+                "din_number",
+                "first_name",
+                "last_name",
+                "date_of_birth",
+                "pan_no",
+                "enable_account",
+                "accountant_name",
+                "accountant_phone"
             )
             logger.info("Successfully retrieved all active customers")
             return Response(list(customers))
