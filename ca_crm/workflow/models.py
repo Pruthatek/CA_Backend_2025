@@ -125,8 +125,10 @@ class ClientWorkCategoryAssignment(models.Model):
     priority_choices = [(1, "Low"), (2, "Medium"), (3, "High"), (4, "Urgent")]
     status_choices = [("wip_task", "WIP Task"), ("overdue", "Overdue"), ("closed", "Closed")]
     assignment_id = models.AutoField(primary_key=True)
+    task_name = models.CharField(max_length=120, null=True, blank=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="work_category_customer")
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="assignments")
+    instructions = models.CharField(max_length=400, blank=True, null=True)
     review_notes = models.CharField(max_length=400, blank=True, null=True)
     progress = models.CharField(max_length=100, choices=progress_choices, default="pending_from_client_side")
     allocated_hours = models.FloatField(blank=True, null=True)

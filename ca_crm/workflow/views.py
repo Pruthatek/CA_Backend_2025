@@ -664,9 +664,11 @@ class ClientWorkCategoryAssignmentCreateView(ModifiedApiview):
                     assigned_to=assigned_to,
                     assigned_by=assigned_by,
                     review_by=review_by,
+                    task_name=data.get("task_name", ""),
                     progress=data.get("status", "pending_from_client_side"),
                     priority=data.get("priority", 1),
                     start_date=data.get("start_date"),
+                    instructions=data.get("instructions", ""),
                     completion_date=data.get("completion_date"),
                     created_date=datetime.now(),
                     created_by=request.user,
@@ -721,6 +723,7 @@ class ClientWorkCategoryAssignmentListView(ModifiedApiview):
             for assignment in assignments:
                 data.append({
                     "id": assignment.assignment_id,
+                    "task_name": assignment.task_name,
                     "customer": assignment.customer.name_of_business,
                     "work_category": assignment.work_category.name,
                     "assigned_to": assignment.assigned_to.username if assignment.assigned_to else "",
@@ -744,6 +747,7 @@ class ClientWorkCategoryAssignmentRetrieveView(ModifiedApiview):
             assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
             data = {
                 "id": assignment.assignment_id,
+                "task_name": assignment.task_name,
                 "customer": assignment.customer.name_of_business,
                 "work_category": assignment.work_category.name,
                 "work_category_id":assignment.work_category.id,
@@ -751,6 +755,7 @@ class ClientWorkCategoryAssignmentRetrieveView(ModifiedApiview):
                 "progress_display": assignment.get_progress_display(),
                 "priority": assignment.priority,
                 "priority_display": assignment.get_priority_display(),
+                "instructions": assignment.instructions,
                 "assigned_to": assignment.assigned_to.username if assignment.assigned_to else "",
                 "assigned_to_id": assignment.assigned_to.id if assignment.assigned_to else "",
                 "assigned_by": assignment.assigned_by.username if assignment.assigned_by else "",
@@ -784,8 +789,10 @@ class ClientWorkCategoryAssignmentUpdateView(ModifiedApiview):
             assignment.assigned_to = assigned_to
             assignment.review_by = review_by
             assignment.assigned_by = assigned_by
+            assignment.task_name = data.get("task_name", assignment.task_name)
             assignment.progress = data.get("progress", assignment.progress)
             assignment.priority = data.get("priority", assignment.priority)
+            assignment.instructions = data.get("instructions", assignment.instructions)
             assignment.start_date = data.get("start_date", assignment.start_date)
             assignment.completion_date = data.get("completion_date", assignment.completion_date)
             assignment.updated_by = request.user
