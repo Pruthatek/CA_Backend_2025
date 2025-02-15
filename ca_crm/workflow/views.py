@@ -766,6 +766,7 @@ class ClientWorkCategoryAssignmentRetrieveView(ModifiedApiview):
                 "completion_date": assignment.completion_date,
                 "required_files": list(assignment.required_files.values("file_name", "file_path", "id")),
                 "activities": list(assignment.activities.values("activity", "assigned_percentage", "status", "id")),
+                "activity_stage": list(assignment.activity_stages.values("activity_stage", "status", "id")),
                 "output_files": list(assignment.output_files.values("file_name", "file_path", "id")),
             }
             return Response(data, status=status.HTTP_200_OK)
