@@ -747,7 +747,7 @@ class ClientWorkCategoryAssignmentFilteredListView(ModifiedApiview):
             client_id = request.GET.get("client_id", None)
             assignments = ClientWorkCategoryAssignment.objects.filter(is_active=True)
             if client_id:
-                assignments.filter(customer__id=client_id)
+                assignments = assignments.filter(customer__id=client_id)
             data = []
             for assignment in assignments:
                 data.append({
