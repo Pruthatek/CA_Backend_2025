@@ -39,6 +39,7 @@ from .views import (
     ClientWorkCategoryAssignmentUpdateView,
     ClientWorkCategoryAssignmentDeleteView,
     ClientWorkCategoryAssignmentListView,
+    ClientWorkCategoryAssignmentFilteredListView,
 
     SubmitClientWorkRequiredFiles,
     SubmitClientWorkActivityList,
@@ -88,6 +89,7 @@ urlpatterns = [
     path('client-work-category-assignment/create/', ClientWorkCategoryAssignmentCreateView.as_view(), name='client_work_category_assignment_create'),
     path('client-work-category-assignment/get/<int:assignment_id>/', ClientWorkCategoryAssignmentRetrieveView.as_view(), name='client_work_category_assignment_get'),
     path('client-work-category-assignment/get/', ClientWorkCategoryAssignmentListView.as_view(), name='client_work_category_assignment_get'),
+    path('client-work-category-assignment/filter/', ClientWorkCategoryAssignmentFilteredListView.as_view(), name='client_work_category_assignment_get_filter'),
     path('client-work-category-assignment/update/<int:assignment_id>/', ClientWorkCategoryAssignmentUpdateView.as_view(), name='client_work_category_assignment_update'),
     path('client-work-category-assignment/delete/<int:assignment_id>/', ClientWorkCategoryAssignmentDeleteView.as_view(), name='client_work_category_assignment_delete'),
     

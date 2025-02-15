@@ -741,6 +741,35 @@ class ClientWorkCategoryAssignmentListView(ModifiedApiview):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ClientWorkCategoryAssignmentFilteredListView(ModifiedApiview):
+    def get(self, request):
+        try:
+            client_id = request.GET.get("client_id", None)
+            assignments = ClientWorkCategoryAssignment.objects.filter(is_active=True)
+            if client_id:
+                assignments.filter(customer__id=client_id)
+            data = []
+            for assignment in assignments:
+                data.append({
+                    "id": assignment.assignment_id,
+                    "task_name": assignment.task_name,
+                    "customer": assignment.customer.name_of_business,
+                    "work_category": assignment.work_category.name,
+                    "assigned_to": assignment.assigned_to.username if assignment.assigned_to else "",
+                    "assigned_by": assignment.assigned_by.username if assignment.assigned_by else "",
+                    "review_by": assignment.review_by.username if assignment.review_by else "",
+                    "progress": assignment.progress,
+                    "progress_display": assignment.get_progress_display(),
+                    "priority": assignment.priority,
+                    "priority_display": assignment.get_priority_display(),
+                    "start_date": assignment.start_date,
+                    "completion_date": assignment.completion_date,
+                })
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class ClientWorkCategoryAssignmentRetrieveView(ModifiedApiview):
     def get(self, request, assignment_id):
         try:
