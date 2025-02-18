@@ -27,6 +27,7 @@ urlpatterns = [
     path('dsc/', include('dsc.urls')),
     path('documents/', include('importexport.urls')),
     path('expense/', include('expense.urls')),
+    path('billing/', include('billing.urls')),
     
 ]
 
