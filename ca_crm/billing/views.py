@@ -15,6 +15,10 @@ from .models import (Billing,
                      Expense, 
                      CustomUser,
                      Receipt,
+                     CreditNote,
+                     CreditNoteItem,
+                     DebitNote,
+                     DebitNoteItem,
                      ReceiptInvoice)
 from workflow.views import ModifiedApiview
 
@@ -642,3 +646,547 @@ class ReceiptDeleteAPIView(ModifiedApiview):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )     
+
+
+class CreditNoteCreateView(ModifiedApiview):
+    def post(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Extract data from the request
+            billing_company = request.data.get('billing_company')
+            customer_id = request.data.get('customer')
+            reason = request.data.get('reason', None)
+            type_of_supply = request.data.get('type_of_supply')
+            place_of_supply = request.data.get('place_of_supply')
+            credit_note_date = request.data.get('credit_note_date')
+            bill_no_to_be_adjusted = request.data.get('bill_no_to_be_adjusted')
+            gst = request.data.get('gst', 18.00)
+            total = request.data.get('total')
+            credit_note_amount = request.data.get('credit_note_amount')
+            items = request.data.get('items', [])
+
+            # Validate required fields
+            if not all([billing_company, customer_id, type_of_supply, place_of_supply, credit_note_date, bill_no_to_be_adjusted, total, credit_note_amount]):
+                return Response(
+                    {"error": "Required fields are missing."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
+                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
+                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
+                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Fetch related objects
+            customer = get_object_or_404(Customer, id=customer_id)
+
+            # Create the CreditNote object
+            with transaction.atomic():
+                credit_note = CreditNote.objects.create(
+                    billing_company=billing_company,
+                    customer=customer,
+                    reason=reason,
+                    type_of_supply=type_of_supply,
+                    place_of_supply=place_of_supply,
+                    credit_note_date=credit_note_date,
+                    bill_no_to_be_adjusted=bill_no_to_be_adjusted,
+                    gst=gst,
+                    total=total,
+                    credit_note_amount=credit_note_amount,
+                    created_by=user,
+                    updated_by=user
+                )
+
+                # Create CreditNoteItems for the credit note
+                for item in items:
+                    CreditNoteItem.objects.create(
+                        credit_note=credit_note,
+                        item_name=item.get('item_name'),
+                        hsn_no=item.get('hsn_no', None),
+                        unit_price=item.get('unit_price')
+                    )
+
+            return Response(
+                {"message": "Credit note created successfully", "credit_note_id": credit_note.id},
+                status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+
+class CreditNoteUpdateView(ModifiedApiview):
+    def put(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            # Fetch the existing CreditNote object
+            credit_note = get_object_or_404(CreditNote, id=id)
+
+            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
+                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
+                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
+                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Extract data from the request
+            billing_company = request.data.get('billing_company', credit_note.billing_company)
+            customer_id = request.data.get('customer', credit_note.customer.id)
+            reason = request.data.get('reason', credit_note.reason)
+            type_of_supply = request.data.get('type_of_supply', credit_note.type_of_supply)
+            place_of_supply = request.data.get('place_of_supply', credit_note.place_of_supply)
+            credit_note_date = request.data.get('credit_note_date', credit_note.credit_note_date)
+            bill_no_to_be_adjusted = request.data.get('bill_no_to_be_adjusted', credit_note.bill_no_to_be_adjusted)
+            gst = request.data.get('gst', credit_note.gst)
+            total = request.data.get('total', credit_note.total)
+            credit_note_amount = request.data.get('credit_note_amount', credit_note.credit_note_amount)
+            items = request.data.get('items', [])
+
+            # Fetch related objects
+            customer = get_object_or_404(Customer, id=customer_id)
+
+            # Update the CreditNote object
+            with transaction.atomic():
+                credit_note.billing_company = billing_company
+                credit_note.customer = customer
+                credit_note.reason = reason
+                credit_note.type_of_supply = type_of_supply
+                credit_note.place_of_supply = place_of_supply
+                credit_note.credit_note_date = credit_note_date
+                credit_note.bill_no_to_be_adjusted = bill_no_to_be_adjusted
+                credit_note.gst = gst
+                credit_note.total = total
+                credit_note.credit_note_amount = credit_note_amount
+                credit_note.updated_by = user
+                credit_note.save()
+
+                # Delete existing CreditNoteItems
+                credit_note.items.all().delete()
+
+                # Create new CreditNoteItems for the credit note
+                for item in items:
+                    CreditNoteItem.objects.create(
+                        credit_note=credit_note,
+                        item_name=item.get('item_name'),
+                        hsn_no=item.get('hsn_no', None),
+                        unit_price=item.get('unit_price')
+                    )
+
+            return Response(
+                {"message": "Credit note updated successfully", "credit_note_id": credit_note.id},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class CreditNoteListView(ModifiedApiview):
+    def get(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch all CreditNote records
+            credit_notes = CreditNote.objects.all()
+            credit_note_list = []
+
+            for credit_note in credit_notes:
+                # Fetch associated CreditNoteItem records
+                items = credit_note.items.all()
+                item_list = []
+
+                for item in items:
+                    item_list.append({
+                        "item_name": item.item_name,
+                        "hsn_no": item.hsn_no,
+                        "unit_price": item.unit_price
+                    })
+
+                # Build the credit note data
+                credit_note_data = {
+                    "id": credit_note.id,
+                    "billing_company": credit_note.billing_company,
+                    "customer": credit_note.customer.id,
+                    "reason": credit_note.reason,
+                    "type_of_supply": credit_note.type_of_supply,
+                    "place_of_supply": credit_note.place_of_supply,
+                    "credit_note_date": credit_note.credit_note_date,
+                    "bill_no_to_be_adjusted": credit_note.bill_no_to_be_adjusted,
+                    "gst": credit_note.gst,
+                    "total": credit_note.total,
+                    "credit_note_amount": credit_note.credit_note_amount,
+                    "created_at": credit_note.created_date,
+                    "updated_at": credit_note.updated_date,
+                    "items": item_list
+                }
+                credit_note_list.append(credit_note_data)
+
+            return Response(credit_note_list, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class CreditNoteRetrieveView(ModifiedApiview):
+    def get(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch the CreditNote record
+            credit_note = get_object_or_404(CreditNote, id=id)
+
+            # Fetch associated CreditNoteItem records
+            items = credit_note.items.all()
+            item_list = []
+
+            for item in items:
+                item_list.append({
+                    "item_name": item.item_name,
+                    "hsn_no": item.hsn_no,
+                    "unit_price": item.unit_price
+                })
+
+            # Build the credit note data
+            credit_note_data = {
+                "id": credit_note.id,
+                "billing_company": credit_note.billing_company,
+                "customer": credit_note.customer.id,
+                "reason": credit_note.reason,
+                "type_of_supply": credit_note.type_of_supply,
+                "place_of_supply": credit_note.place_of_supply,
+                "credit_note_date": credit_note.credit_note_date,
+                "bill_no_to_be_adjusted": credit_note.bill_no_to_be_adjusted,
+                "gst": credit_note.gst,
+                "total": credit_note.total,
+                "credit_note_amount": credit_note.credit_note_amount,
+                "created_at": credit_note.created_date,
+                "updated_at": credit_note.updated_date,
+                "items": item_list
+            }
+
+            return Response(credit_note_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class CreditNoteDeleteView(ModifiedApiview):
+    def delete(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch the CreditNote record
+            credit_note = get_object_or_404(CreditNote, id=id)
+
+            # Delete the CreditNote and its associated items
+            with transaction.atomic():
+                credit_note.items.all().delete()  # Delete associated items
+                credit_note.delete()  # Delete the credit note
+
+            return Response(
+                {"message": "Credit note deleted successfully"},
+                status=status.HTTP_204_NO_CONTENT
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class DebitNoteCreateView(ModifiedApiview):
+    def post(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
+                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
+                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
+                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Extract data from the request
+            billing_company = request.data.get('billing_company')
+            customer_id = request.data.get('customer')
+            reason = request.data.get('reason', None)
+            type_of_supply = request.data.get('type_of_supply')
+            place_of_supply = request.data.get('place_of_supply')
+            debit_note_date = request.data.get('debit_note_date')
+            bill_no_to_be_adjusted = request.data.get('bill_no_to_be_adjusted')
+            gst = request.data.get('gst', 18.00)
+            total = request.data.get('total')
+            debit_note_amount = request.data.get('debit_note_amount')
+            items = request.data.get('items', [])
+
+            # Validate required fields
+            if not all([billing_company, customer_id, type_of_supply, place_of_supply, debit_note_date, bill_no_to_be_adjusted, total, debit_note_amount]):
+                return Response(
+                    {"error": "Required fields are missing."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Fetch related objects
+            customer = get_object_or_404(Customer, id=customer_id)
+
+            # Create the DebitNote object
+            with transaction.atomic():
+                debit_note = DebitNote.objects.create(
+                    billing_company=billing_company,
+                    customer=customer,
+                    reason=reason,
+                    type_of_supply=type_of_supply,
+                    place_of_supply=place_of_supply,
+                    debit_note_date=debit_note_date,
+                    bill_no_to_be_adjusted=bill_no_to_be_adjusted,
+                    gst=gst,
+                    total=total,
+                    debit_note_amount=debit_note_amount,
+                    created_by=user,
+                    updated_by=user
+                )
+
+                # Create DebitNoteItems for the debit note
+                for item in items:
+                    DebitNoteItem.objects.create(
+                        debit_note=debit_note,
+                        item_name=item.get('item_name'),
+                        hsn_no=item.get('hsn_no', None),
+                        unit_price=item.get('unit_price')
+                    )
+
+            return Response(
+                {"message": "Debit note created successfully", "debit_note_id": debit_note.id},
+                status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+
+class DebitNoteUpdateView(ModifiedApiview):
+    def put(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
+                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
+                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
+                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+            # Fetch the existing DebitNote object
+            debit_note = get_object_or_404(DebitNote, id=id)
+
+            # Extract data from the request
+            billing_company = request.data.get('billing_company', debit_note.billing_company)
+            customer_id = request.data.get('customer', debit_note.customer.id)
+            reason = request.data.get('reason', debit_note.reason)
+            type_of_supply = request.data.get('type_of_supply', debit_note.type_of_supply)
+            place_of_supply = request.data.get('place_of_supply', debit_note.place_of_supply)
+            debit_note_date = request.data.get('debit_note_date', debit_note.debit_note_date)
+            bill_no_to_be_adjusted = request.data.get('bill_no_to_be_adjusted', debit_note.bill_no_to_be_adjusted)
+            gst = request.data.get('gst', debit_note.gst)
+            total = request.data.get('total', debit_note.total)
+            debit_note_amount = request.data.get('debit_note_amount', debit_note.debit_note_amount)
+            items = request.data.get('items', [])
+
+            # Fetch related objects
+            customer = get_object_or_404(Customer, id=customer_id)
+
+            # Update the DebitNote object
+            with transaction.atomic():
+                debit_note.billing_company = billing_company
+                debit_note.customer = customer
+                debit_note.reason = reason
+                debit_note.type_of_supply = type_of_supply
+                debit_note.place_of_supply = place_of_supply
+                debit_note.debit_note_date = debit_note_date
+                debit_note.bill_no_to_be_adjusted = bill_no_to_be_adjusted
+                debit_note.gst = gst
+                debit_note.total = total
+                debit_note.debit_note_amount = debit_note_amount
+                debit_note.updated_by = user
+                debit_note.save()
+
+                # Delete existing DebitNoteItems
+                debit_note.items.all().delete()
+
+                # Create new DebitNoteItems for the debit note
+                for item in items:
+                    DebitNoteItem.objects.create(
+                        debit_note=debit_note,
+                        item_name=item.get('item_name'),
+                        hsn_no=item.get('hsn_no', None),
+                        unit_price=item.get('unit_price')
+                    )
+
+            return Response(
+                {"message": "Debit note updated successfully", "debit_note_id": debit_note.id},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class DebitNoteListView(ModifiedApiview):
+    def get(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch all DebitNote records
+            debit_notes = DebitNote.objects.all()
+            debit_note_list = []
+
+            for debit_note in debit_notes:
+                # Fetch associated DebitNoteItem records
+                items = debit_note.items.all()
+                item_list = []
+
+                for item in items:
+                    item_list.append({
+                        "item_name": item.item_name,
+                        "hsn_no": item.hsn_no,
+                        "unit_price": item.unit_price
+                    })
+
+                # Build the debit note data
+                debit_note_data = {
+                    "id": debit_note.id,
+                    "billing_company": debit_note.billing_company,
+                    "customer": debit_note.customer.id,
+                    "reason": debit_note.reason,
+                    "type_of_supply": debit_note.type_of_supply,
+                    "place_of_supply": debit_note.place_of_supply,
+                    "debit_note_date": debit_note.debit_note_date,
+                    "bill_no_to_be_adjusted": debit_note.bill_no_to_be_adjusted,
+                    "gst": debit_note.gst,
+                    "total": debit_note.total,
+                    "debit_note_amount": debit_note.debit_note_amount,
+                    "created_at": debit_note.created_date,
+                    "updated_at": debit_note.updated_date,
+                    "items": item_list
+                }
+                debit_note_list.append(debit_note_data)
+
+            return Response(debit_note_list, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class DebitNoteRetrieveView(ModifiedApiview):
+    def get(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch the DebitNote record
+            debit_note = get_object_or_404(DebitNote, id=id)
+
+            # Fetch associated DebitNoteItem records
+            items = debit_note.items.all()
+            item_list = []
+
+            for item in items:
+                item_list.append({
+                    "item_name": item.item_name,
+                    "hsn_no": item.hsn_no,
+                    "unit_price": item.unit_price
+                })
+
+            # Build the debit note data
+            debit_note_data = {
+                "id": debit_note.id,
+                "billing_company": debit_note.billing_company,
+                "customer": debit_note.customer.id,
+                "reason": debit_note.reason,
+                "type_of_supply": debit_note.type_of_supply,
+                "place_of_supply": debit_note.place_of_supply,
+                "debit_note_date": debit_note.debit_note_date,
+                "bill_no_to_be_adjusted": debit_note.bill_no_to_be_adjusted,
+                "gst": debit_note.gst,
+                "total": debit_note.total,
+                "debit_note_amount": debit_note.debit_note_amount,
+                "created_at": debit_note.created_date,
+                "updated_at": debit_note.updated_date,
+                "items": item_list
+            }
+
+            return Response(debit_note_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class DebitNoteDeleteView(ModifiedApiview):
+    def delete(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Fetch the DebitNote record
+            debit_note = get_object_or_404(DebitNote, id=id)
+
+            # Delete the DebitNote and its associated items
+            with transaction.atomic():
+                debit_note.items.all().delete()  # Delete associated items
+                debit_note.delete()  # Delete the debit note
+
+            return Response(
+                {"message": "Debit note deleted successfully"},
+                status=status.HTTP_204_NO_CONTENT
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

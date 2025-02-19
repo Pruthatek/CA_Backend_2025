@@ -10,6 +10,16 @@ from .views import (
     ReceiptRetrieveAPIView,
     ReceiptUpdateAPIView,
     ReceiptDeleteAPIView,
+    CreditNoteCreateView,
+    CreditNoteListView,
+    CreditNoteUpdateView,
+    CreditNoteRetrieveView,
+    CreditNoteDeleteView,
+    DebitNoteCreateView,
+    DebitNoteListView,
+    DebitNoteUpdateView,
+    DebitNoteRetrieveView,
+    DebitNoteDeleteView
 )
 
 urlpatterns = [
@@ -24,5 +34,17 @@ urlpatterns = [
     path('receipt/retrieve/<int:id>/', ReceiptRetrieveAPIView.as_view(), name='receipt-retrieve'),
     path('receipt/update/<int:id>/', ReceiptUpdateAPIView.as_view(), name='receipt-update'),
     path('receipt/delete/<int:id>/', ReceiptDeleteAPIView.as_view(), name='receipt-delete'),
+
+    path('credit-note/create/', CreditNoteCreateView.as_view(), name='credit-note-create'),
+    path('credit-note/', CreditNoteListView.as_view(), name='credit-note-list'),
+    path('credit-note/retrieve/<int:id>/', CreditNoteRetrieveView.as_view(), name='credit-note-retrieve'),
+    path('credit-note/update/<int:id>/', CreditNoteUpdateView.as_view(), name='credit-note-update'),
+    path('credit-note/delete/<int:id>/', CreditNoteDeleteView.as_view(), name='credit-note-delete'),
+
+    path('debit-note/create/', DebitNoteCreateView.as_view(), name='debit-note-create'),
+    path('debit-note/', DebitNoteListView.as_view(), name='debit-note-list'),
+    path('debit-note/retrieve/<int:id>/', DebitNoteRetrieveView.as_view(), name='debit-note-retrieve'),
+    path('debit-note/update/<int:id>/', DebitNoteUpdateView.as_view(), name='debit-note-update'),
+    path('debit-note/delete/<int:id>/', DebitNoteDeleteView.as_view(), name='debit-note-delete'),
 
 ]  

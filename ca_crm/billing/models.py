@@ -123,3 +123,111 @@ class ReceiptInvoice(models.Model):
         return f"Invoice {self.invoice} - Receipt {self.receipt.receipt_no}"
     
 
+
+class CreditNote(models.Model):
+    TYPE_OF_SUPPLY = [ ("b2b","B2B"), ("sezwp","SEZWP"), 
+                      ("sezwop","SEZWOP"), ("expwop","EXPWOP"), 
+                      ("dexp","DEXP"), ("b2c","B2C")]
+
+    REASONS_LIST = [ 
+                    ("sales_return","Sales Return"), 
+                    ("post_sales_discount","Post sales Discount"), 
+                    ("deficiency_in_service","Deficiency In Service"), 
+                    ("correction_in_invoice","Correction in invoice"), 
+                    ("change_in_pos","Change in POS"), 
+                    ("finalization_of_provisional_assessment","Finalization of provisional Assessment"), 
+                    ("others","Others")]        
+    # Main fields
+    billing_company = models.CharField(max_length=255, verbose_name="Billing Company")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='customer_credit')
+    reason = models.CharField(max_length=255, choices=REASONS_LIST, default='others')
+    type_of_supply = models.CharField(max_length=100, choices=TYPE_OF_SUPPLY, verbose_name="Type Of Supply")
+    place_of_supply = models.CharField(max_length=100, verbose_name="Place Of Supply")
+    credit_note_date = models.DateField(verbose_name="Credit Note Date")
+    bill_no_to_be_adjusted = models.CharField(max_length=100, verbose_name="Bill No. to be Adjusted")
+    gst = models.DecimalField(
+        max_digits=5, decimal_places=2, default=18.00, verbose_name="GST (%)")
+    total = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Total")
+    credit_note_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Credit Note Amount")
+
+    # Timestamps
+    created_date = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="credit_note_created_by")
+    updated_date = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="credit_note_updated_by")
+
+    def __str__(self):
+        return f"Credit Note - {self.bill_no_to_be_adjusted}"
+
+
+class CreditNoteItem(models.Model):
+    # ForeignKey to CreditNote
+    credit_note = models.ForeignKey(
+        CreditNote, on_delete=models.CASCADE, related_name="items",
+        verbose_name="Credit Note"
+    )
+    item_name = models.CharField(max_length=255, verbose_name="Item Name")
+    hsn_no = models.CharField(max_length=255, blank=True, null=True)
+    unit_price = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Unit Price")
+
+    def __str__(self):
+        return f"{self.item_name} - {self.hsn_no}"
+
+
+class DebitNote(models.Model):
+    # Main fields
+    TYPE_OF_SUPPLY = [ ("b2b","B2B"), ("sezwp","SEZWP"), 
+                      ("sezwop","SEZWOP"), ("expwop","EXPWOP"), 
+                      ("dexp","DEXP"), ("b2c","B2C")]
+
+    REASONS_LIST = [ 
+                    ("sales_return","Sales Return"), 
+                    ("post_sales_discount","Post sales Discount"), 
+                    ("deficiency_in_service","Deficiency In Service"), 
+                    ("correction_in_invoice","Correction in invoice"), 
+                    ("change_in_pos","Change in POS"), 
+                    ("finalization_of_provisional_assessment","Finalization of provisional Assessment"), 
+                    ("others","Others")]
+    
+    billing_company = models.CharField(max_length=255, verbose_name="Billing Company")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='customer_debit')
+    reason = models.CharField(max_length=255, choices=REASONS_LIST, verbose_name="Reason", null=True, blank=True)
+    type_of_supply = models.CharField(max_length=100, choices=TYPE_OF_SUPPLY, verbose_name="Type Of Supply")
+    place_of_supply = models.CharField(max_length=100, verbose_name="Place Of Supply")
+    debit_note_date = models.DateField(verbose_name="Debit Note Date")
+    bill_no_to_be_adjusted = models.CharField(max_length=100, verbose_name="Bill No. to be Adjusted")
+    gst = models.DecimalField(
+        max_digits=5, decimal_places=2, default=18.00, verbose_name="GST (%)")
+    total = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Total")
+    debit_note_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Debit Note Amount")
+
+    # Timestamps
+    created_date = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="debit_note_created_by")
+    updated_date = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="debit_note_updated_by")
+
+    def __str__(self):
+        return f"Debit Note - {self.bill_no_to_be_adjusted}"
+
+
+class DebitNoteItem(models.Model):
+    # ForeignKey to DebitNote
+    debit_note = models.ForeignKey(
+        DebitNote, on_delete=models.CASCADE, related_name="items",
+        verbose_name="Debit Note"
+    )
+
+    # Item details
+    item_name = models.CharField(max_length=255, verbose_name="Item Name")
+    hsn_no = models.CharField(max_length=255, blank=True, null=True, verbose_name="HSN No.")
+    unit_price = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Unit Price")
+
+    def __str__(self):
+        return f"{self.item_name} - {self.hsn_no}"
