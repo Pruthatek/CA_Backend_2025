@@ -131,7 +131,7 @@ class BillingCreateView(ModifiedApiview):
                         bill=billing_obj,
                         expense_description=expense.get('expense_description'),
                         expense_type=expense.get('expense_type'),
-                        expense=get_object_or_404(Expense, id=expense.get('expense_id')) if bill_type == 'structured' else None,
+                        expense=get_object_or_404(Expense, id=expense.get('expense_id')) if expense.get('expense_id',None) else None,
                         hsn_code=expense.get('hsn_code'),
                         amount=expense.get('amount')
                     )
@@ -339,7 +339,7 @@ class BillingUpdateView(ModifiedApiview):
                             bill=billing_obj,
                             expense_description=expense_data.get('expense_description'),
                             expense_type=expense_data.get('expense_type'),
-                            work_category=get_object_or_404(Expense, id=expense_data.get('work_category_id')) if bill_type == 'structured' else None,
+                            work_category=get_object_or_404(Expense, id=expense_data.get('work_category_id')) if expense_data.get('work_category_id', None) else None,
                             hsn_code=expense_data.get('hsn_code'),
                             amount=expense_data.get('amount')
                         )
