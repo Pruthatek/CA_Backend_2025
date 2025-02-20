@@ -731,12 +731,6 @@ class CreditNoteUpdateView(ModifiedApiview):
             # Fetch the existing CreditNote object
             credit_note = get_object_or_404(CreditNote, id=id)
 
-            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
-                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
-                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
-                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Extract data from the request
             billing_company = request.data.get('billing_company', credit_note.billing_company)
@@ -751,6 +745,12 @@ class CreditNoteUpdateView(ModifiedApiview):
             credit_note_amount = request.data.get('credit_note_amount', credit_note.credit_note_amount)
             items = request.data.get('items', [])
 
+            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
+                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
+                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
+                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
             # Fetch related objects
             customer = get_object_or_404(Customer, id=customer_id)
 
@@ -918,6 +918,7 @@ class CreditNoteDeleteView(ModifiedApiview):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
 class DebitNoteCreateView(ModifiedApiview):
     def post(self, request):
         try:
@@ -925,12 +926,6 @@ class DebitNoteCreateView(ModifiedApiview):
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
-                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
-                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
-                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Extract data from the request
             billing_company = request.data.get('billing_company')
@@ -953,6 +948,13 @@ class DebitNoteCreateView(ModifiedApiview):
                 )
 
             # Fetch related objects
+            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
+                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
+                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
+                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
+
             customer = get_object_or_404(Customer, id=customer_id)
 
             # Create the DebitNote object
@@ -1000,12 +1002,6 @@ class DebitNoteUpdateView(ModifiedApiview):
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
-                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
-                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
-                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
 
 
             # Fetch the existing DebitNote object
@@ -1024,6 +1020,13 @@ class DebitNoteUpdateView(ModifiedApiview):
             debit_note_amount = request.data.get('debit_note_amount', debit_note.debit_note_amount)
             items = request.data.get('items', [])
 
+            if type_of_supply not in ["b2b", "sezwp", "sezwop", "expwop", "dexp", "b2c"]:
+                return Response({"message": "pleases select proper type of supply"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if reason not in ["sales_return", "post_sales_discount", "deficiency_in_service", "correction_in_invoice", 
+                              "change_in_pos", "finalization_of_provisional_assessment", "others"]:
+                return Response({"message": "pleases select proper reason"}, status=status.HTTP_400_BAD_REQUEST)
+            
             # Fetch related objects
             customer = get_object_or_404(Customer, id=customer_id)
 
