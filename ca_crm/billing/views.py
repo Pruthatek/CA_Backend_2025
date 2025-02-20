@@ -44,6 +44,9 @@ class BillingCreateView(ModifiedApiview):
             proforma_invoice = request.data.get('proforma_invoice', False)
             requested_by = request.data.get('requested_by')
             narration = request.data.get('narration')
+            hrs_spent = request.data.get('hrs_spent')
+            task = request.data.get('task')
+            include_expense = request.data.get('include_expense', False)
             sub_total = request.data.get('sub_total')
             discount = request.data.get('discount')
             discount_amount = request.data.get('discount_amount')
@@ -87,6 +90,9 @@ class BillingCreateView(ModifiedApiview):
                     fees=fees,
                     invoice_date=invoice_date,
                     proforma_invoice=proforma_invoice,
+                    hrs_spent=hrs_spent,
+                    task=task,
+                    include_expense=include_expense,
                     requested_by=requested_by,
                     narration=narration,
                     sub_total=sub_total,
@@ -182,6 +188,9 @@ class BillingRetrieveView(ModifiedApiview):
                 "requested_by": billing_obj.requested_by,
                 "narration": billing_obj.narration,
                 "sub_total": billing_obj.sub_total,
+                "hrs_spent": billing_obj.hrs_spent,
+                "task": billing_obj.task,
+                "include_expense": billing_obj.include_expense,
                 "discount": billing_obj.discount,
                 "discount_amount": billing_obj.discount_amount,
                 "gst": billing_obj.gst,
@@ -227,6 +236,9 @@ class BillingUpdateView(ModifiedApiview):
             proforma_invoice = request.data.get('proforma_invoice', billing_obj.proforma_invoice)
             requested_by = request.data.get('requested_by', billing_obj.requested_by)
             narration = request.data.get('narration', billing_obj.narration)
+            task = request.data.get('task', billing_obj.task)
+            hrs_spent = request.data.get('hrs_spent', billing_obj.hrs_spent)
+            include_expense = request.data.get('include_expense', billing_obj.include_expense)
             sub_total = request.data.get('sub_total', billing_obj.sub_total)
             discount = request.data.get('discount', billing_obj.discount)
             discount_amount = request.data.get('discount_amount', billing_obj.discount_amount)
@@ -260,6 +272,9 @@ class BillingUpdateView(ModifiedApiview):
                 billing_obj.requested_by = requested_by
                 billing_obj.narration = narration
                 billing_obj.sub_total = sub_total
+                billing_obj.hrs_spent = hrs_spent
+                billing_obj.task = task
+                billing_obj.include_expense = include_expense
                 billing_obj.discount = discount
                 billing_obj.discount_amount = discount_amount
                 billing_obj.gst = gst
