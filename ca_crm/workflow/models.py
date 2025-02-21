@@ -44,6 +44,7 @@ class WorkCategoryFilesRequired(models.Model):
     id = models.AutoField(primary_key=True)
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="files_required")
     file_name = models.CharField(max_length=255)
+    display_order = models.PositiveIntegerField(default=0, null=True, blank=True)
     created_by = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, related_name="workcategories_filesrequired_created"
     )
@@ -63,6 +64,7 @@ class WorkCategoryActivityList(models.Model):
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="activity_list")
     activity_name = models.CharField(max_length=255)
     assigned_percentage = models.FloatField(blank=True, null=True)
+    display_order = models.PositiveIntegerField(default=0, null=True, blank=True)
     created_by = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, related_name="workcategories_activitylist_created")
     created_date = models.DateTimeField(auto_now_add=True)
@@ -80,6 +82,7 @@ class WorkCategoryActivityStages(models.Model):
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="activity_stage")
     activity_stage = models.CharField(max_length=255)
     description = models.CharField(max_length=200, blank=True, null=True)
+    display_order = models.PositiveIntegerField(default=0, null=True, blank=True)
     created_by = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, related_name="workcategories_activitystage_created")
     created_date = models.DateTimeField(auto_now_add=True)
@@ -96,6 +99,7 @@ class WorkCategoryUploadDocumentRequired(models.Model):
     id = models.AutoField(primary_key=True)
     work_category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="upload_document")
     file_name = models.CharField(max_length=255)
+    display_order = models.PositiveIntegerField(default=0, null=True, blank=True)
     created_by = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, related_name="workcategories_documentrequired_created"
     )
@@ -153,6 +157,7 @@ class AssignedWorkRequiredFiles(models.Model):
     assignment = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.CASCADE, related_name="required_files")
     file_name = models.CharField(max_length=255)
     file_path = models.CharField(max_length=255, null=True, blank=True)
+    display_order = models.PositiveIntegerField(default=0, null=True, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -169,6 +174,7 @@ class AssignedWorkActivity(models.Model):
     assigned_percentage = models.FloatField(blank=True, null=True)
     status = models.CharField(max_length=100, choices=status_choices, default="pending")
     note = models.CharField(max_length=100, null=True, blank=True)
+    display_order = models.PositiveIntegerField(default=0, null=True, blank=True)
     start_date = models.DateField(blank=True, null=True)
     completion_date = models.DateField(blank=True, null=True)
     updated_date = models.DateTimeField(auto_now=True)
@@ -184,6 +190,7 @@ class AssignedWorkActivityStages(models.Model):
     activity_stage = models.CharField(max_length=100, null=True, blank=True)
     status = models.CharField(max_length=100, null=True, blank=True)
     start_date = models.DateField(blank=True, null=True)
+    display_order = models.PositiveIntegerField(default=0, null=True, blank=True)
     completion_date = models.DateField(blank=True, null=True)
     updated_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -197,6 +204,7 @@ class AssignedWorkOutputFiles(models.Model):
     assignment = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.CASCADE, related_name="output_files")
     file_name = models.CharField(max_length=255)
     file_path = models.CharField(max_length=255, null=True, blank=True)
+    display_order = models.PositiveIntegerField(default=0, null=True, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
