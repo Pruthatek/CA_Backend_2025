@@ -48,6 +48,9 @@ from .views import (
     SubmitClientWorkAdditionalActivity,
     SubmitClientWorkAdditionalFiles,
 
+    WorkCategoryUploadDocumentRequiredBulkCreateAPIView,
+    WorkCategoryActivityListBulkCreateAPIView,
+    WorkCategoryOutputFileBulkCreateAPIView,
 )
 
 urlpatterns = [
@@ -99,4 +102,8 @@ urlpatterns = [
     path('submit-client-work/output-files/<int:assignment_id>/', SubmitClientWorkOutputFiles.as_view(), name="submit-client-work-required-files"),
     path('submit-client-work/additional-files/<int:assignment_id>/', SubmitClientWorkAdditionalFiles.as_view(), name="submit-client-work-additional-files"),
     path('submit-client-work/additional-activity/<int:assignment_id>/', SubmitClientWorkAdditionalActivity.as_view(), name="submit-client-work-additional-activities"),
+
+    path('bulk-upload/required-files/', WorkCategoryUploadDocumentRequiredBulkCreateAPIView.as_view(), name="files-required-bulk-create"),
+    path('bulk-upload/activity-list/', WorkCategoryActivityListBulkCreateAPIView.as_view(), name="activity-list-bulk-create"),
+    path('bulk-upload/output-files/', WorkCategoryOutputFileBulkCreateAPIView.as_view(), name="output-files-bulk-create"),
 ]

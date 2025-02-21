@@ -1363,7 +1363,7 @@ class SubmitReviewByView(ModifiedApiview):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class WorkCategoryUploadDocumentRequiredBulkCreateAPIView(APIView):
+class WorkCategoryUploadDocumentRequiredBulkCreateAPIView(ModifiedApiview):
     def post(self, request):
         try:
             # Get the authenticated user
@@ -1432,7 +1432,7 @@ class WorkCategoryUploadDocumentRequiredBulkCreateAPIView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-class WorkCategoryActivityListBulkCreateAPIView(APIView):
+class WorkCategoryActivityListBulkCreateAPIView(ModifiedApiview):
     def post(self, request):
         try:
             # Get the authenticated user
@@ -1499,7 +1499,7 @@ class WorkCategoryActivityListBulkCreateAPIView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-class WorkCategoryOutputFileBulkCreateAPIView(APIView):
+class WorkCategoryOutputFileBulkCreateAPIView(ModifiedApiview):
     def post(self, request):
         try:
             # Get the authenticated user
