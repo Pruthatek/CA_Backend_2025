@@ -1465,7 +1465,7 @@ class WorkCategoryActivityListBulkCreateAPIView(ModifiedApiview):
             # Validate the required columns
             if not all(col in df.columns for col in ["Activity Name", "Activity Percentage", "Display Order"]):
                 return Response(
-                    {"error": "The XLSX file must contain a 'File Name' and 'Display Order' column"},
+                    {"error": "The XLSX file must contain a 'Activity Name', 'Activity Percentage' and 'Display Order' column"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
