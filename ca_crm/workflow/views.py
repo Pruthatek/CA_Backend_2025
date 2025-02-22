@@ -1463,7 +1463,7 @@ class WorkCategoryActivityListBulkCreateAPIView(ModifiedApiview):
             df = pd.read_excel(uploaded_file)
 
             # Validate the required columns
-            if ["File Name", "Display Order"] not in df.columns:
+            if not all(col in df.columns for col in ["Activity Name", "Activity Percentage", "Display Order"]):
                 return Response(
                     {"error": "The XLSX file must contain a 'File Name' and 'Display Order' column"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -1530,7 +1530,7 @@ class WorkCategoryOutputFileBulkCreateAPIView(ModifiedApiview):
             df = pd.read_excel(uploaded_file)
 
             # Validate the required columns
-            if ["File Name", "Display Order"] not in df.columns:
+            if "File Name" not in df.columns:
                 return Response(
                     {"error": "The XLSX file must contain a 'File Name' and 'Display Order' column"},
                     status=status.HTTP_400_BAD_REQUEST,
