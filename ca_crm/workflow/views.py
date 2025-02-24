@@ -1,5 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from rest_framework import status
 from openpyxl import load_workbook
 import pandas as pd
@@ -790,6 +792,119 @@ class ClientWorkCategoryAssignmentCreateView(ModifiedApiview):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class BulkClientWorkCategoryAssignmentCreateView(ModifiedApiview):
+    def post(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            department_id = request.data.get("department_id")
+            work_category_id = request.data.get("work_category_id")
+            excel_file = request.FILES.get("excel_file")
+
+            if not all([department_id, work_category_id, excel_file]):
+                return Response(
+                    {"error": "department_id, work_category_id, and excel_file are required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Save the uploaded file temporarily
+            file_name = default_storage.save(excel_file.name, ContentFile(excel_file.read()))
+            file_path = default_storage.path(file_name)
+
+            # Read the Excel file
+            df = pd.read_excel(file_path)
+
+            # Fetch related objects
+            work_category = WorkCategory.objects.get(id=work_category_id)
+
+            with transaction.atomic():
+                for index, row in df.iterrows():
+                    customer_id = row.get("customer_id")
+                    assigned_to_id = row.get("assigned_to_id", "")
+                    assigned_by_id = row.get("assigned_by_id", "")
+                    review_by_id = row.get("review_by_id", "")
+
+                    if assigned_to_id:
+                        assigned_to = CustomUser.objects.get(id=assigned_to_id)
+                        assigned_by = CustomUser.objects.get(id=assigned_by_id)
+                        review_by = CustomUser.objects.get(id=review_by_id)
+                    else:
+                        assigned_to = None
+                        assigned_by = None
+                        review_by = None
+
+                    assigned_by = user
+
+                    customer = Customer.objects.get(id=customer_id)
+
+                    assignment = ClientWorkCategoryAssignment.objects.create(
+                        customer=customer,
+                        work_category=work_category,
+                        assigned_to=assigned_to,
+                        assigned_by=assigned_by,
+                        review_by=review_by,
+                        task_name=row.get("task_name", ""),
+                        progress=row.get("status", "pending_from_client_side"),
+                        priority=row.get("priority", 1),
+                        start_date=row.get("start_date"),
+                        instructions=row.get("instructions", ""),
+                        completion_date=row.get("completion_date"),
+                        created_date=datetime.now(),
+                        created_by=user,
+                        updated_by=user
+                    )
+
+                    # Copy required files
+                    required_files = WorkCategoryFilesRequired.objects.filter(work_category=work_category)
+                    for file in required_files:
+                        AssignedWorkRequiredFiles.objects.create(
+                            assignment=assignment,
+                            file_name=file.file_name,
+                            display_order=file.display_order,
+                            is_active=True
+                        )
+
+                    # Copy activity list
+                    activities = WorkCategoryActivityList.objects.filter(work_category=work_category)
+                    for activity in activities:
+                        AssignedWorkActivity.objects.create(
+                            assignment=assignment,
+                            activity=activity.activity_name,
+                            assigned_percentage=activity.assigned_percentage,
+                            display_order=activity.display_order,
+                            is_active=True
+                        )
+
+                    # Copy activity stages
+                    activity_stages = WorkCategoryActivityStages.objects.filter(work_category=work_category)
+                    for stage in activity_stages:
+                        AssignedWorkActivityStages.objects.create(
+                            assignment=assignment,
+                            activity_stage=stage.activity_stage,
+                            display_order=stage.display_order,
+                            is_active=True
+                        )
+
+                    # Copy output document requirements
+                    output_files = WorkCategoryUploadDocumentRequired.objects.filter(work_category=work_category)
+                    for file in output_files:
+                        AssignedWorkOutputFiles.objects.create(
+                            assignment=assignment,
+                            file_name=file.file_name,
+                            display_order=file.display_order,
+                            is_active=True
+                        )
+
+            # Delete the temporary file
+            default_storage.delete(file_name)
+
+            return Response({"message": "Bulk assignments created successfully"}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class ClientWorkCategoryAssignmentListView(ModifiedApiview):
     def get(self, request):
         try:
@@ -804,6 +919,9 @@ class ClientWorkCategoryAssignmentListView(ModifiedApiview):
                     "task_name": assignment.task_name,
                     "customer": assignment.customer.name_of_business,
                     "work_category": assignment.work_category.name,
+                    "work_category_id": assignment.work_category.id,
+                    "department_name": assignment.work_category.department.name,
+                    "department_id": assignment.work_category.department.id,
                     "assigned_to": assignment.assigned_to.username if assignment.assigned_to else "",
                     "assigned_by": assignment.assigned_by.username if assignment.assigned_by else "",
                     "review_by": assignment.review_by.username if assignment.review_by else "",
@@ -864,6 +982,8 @@ class ClientWorkCategoryAssignmentRetrieveView(ModifiedApiview):
                 "customer": assignment.customer.name_of_business,
                 "work_category": assignment.work_category.name,
                 "work_category_id":assignment.work_category.id,
+                "department_name": assignment.work_category.department.name,
+                "department_id": assignment.work_category.department.id,
                 "progress": assignment.progress,
                 "progress_display": assignment.get_progress_display(),
                 "priority": assignment.priority,
