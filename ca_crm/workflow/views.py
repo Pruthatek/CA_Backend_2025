@@ -18,17 +18,24 @@ from .models import (
     AssignedWorkActivityStages,
     AssignedWorkOutputFiles,
 )
+from employees.models import TimeTracking 
 from datetime import datetime, time
 from rest_framework.permissions import IsAuthenticated
 import jwt 
 from django.conf import settings
 from custom_auth.models import CustomUser
+from django.db import models
 from clients.models import Customer
 from django.db import transaction
 import os
 import uuid
 from django.core.files.storage import FileSystemStorage
 import posixpath
+from django.db.models import Sum, F, OuterRef, Subquery, Prefetch, Count
+from billing.models import (
+    ClientWorkCategoryAssignment, Expense, Billing, BillItems, ExpenseItems, Receipt, ReceiptInvoice
+)
+
 
 
 class ModifiedApiview(APIView):
@@ -1687,5 +1694,87 @@ class WorkCategoryOutputFileBulkCreateAPIView(ModifiedApiview):
                 status=status.HTTP_201_CREATED,
             )
 
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class ConsolidatedTaskDetailsWithExpensesAndBillingView(ModifiedApiview):
+    def get(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Subquery to calculate total expenses for each task
+            total_expenses_subquery = Expense.objects.filter(
+                work_id=OuterRef('assignment_id')
+            ).values('work_id').annotate(
+                total_expenses=Sum('expense_amount')
+            ).values('total_expenses')
+
+            # Subquery to calculate total hours spent on each task
+            hours_spent_subquery = TimeTracking.objects.filter(
+                work_id=OuterRef('assignment_id')
+            ).values('work_id').annotate(
+                total_hours_spent=Sum(F('duration'))
+            ).values('total_hours_spent')
+
+            # Prefetch related billing and receipt data
+            billing_prefetch = Prefetch(
+                'bill_task',
+                queryset=Billing.objects.annotate(
+                    total_paid=Sum('paid_amount')
+                )
+            )
+
+            # Fetch all tasks with consolidated details
+            tasks = ClientWorkCategoryAssignment.objects.annotate(
+                customer_name=F('customer__name_of_business'),
+                task_title=F('task_name'),
+                assigned_to_username=F('assigned_to__username'),
+                total_hours_spent=Subquery(hours_spent_subquery, output_field=models.DurationField()),
+                total_expenses=Subquery(total_expenses_subquery, output_field=models.FloatField())
+            ).prefetch_related(
+                billing_prefetch,
+                Prefetch('task_expense', queryset=Expense.objects.all())
+            ).values(
+                'assignment_id',
+                'customer_name',
+                'task_title',
+                'start_date',
+                'completion_date',
+                'assigned_to_username',
+                'allocated_hours',
+                'total_hours_spent',
+                'total_expenses',
+                'progress',
+                'priority'
+            )
+
+            # Convert duration to hours and add billing and expense details
+            consolidated_data = []
+            for task in tasks:
+                task_data = dict(task)
+                task_data['total_hours_spent'] = task_data['total_hours_spent'].total_seconds() / 3600 if task_data['total_hours_spent'] else 0
+                task_data['total_expenses'] = task_data['total_expenses'] or 0
+
+                # Fetch billing details for the task
+                # billing_details = []
+                # for bill in ClientWorkCategoryAssignment.objects.get(assignment_id=task['assignment_id']).bill_task.all():
+                #     billing_details.append({
+                #         'bill_id': bill.id,
+                #         'invoice_date': bill.invoice_date,
+                #         'total_amount': bill.total,
+                #         'paid_amount': bill.paid_amount,
+                #         'unpaid_amount': bill.unpaid_amount,
+                #         'payment_status': bill.payment_status,
+                #         'invoice_status': 'Paid' if bill.payment_status == 'paid' else 'Unpaid'
+                #     })
+
+                # task_data['billing_details'] = billing_details
+                consolidated_data.append(task_data)
+
+            return Response(consolidated_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

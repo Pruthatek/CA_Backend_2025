@@ -47,10 +47,13 @@ from .views import (
     SubmitClientWorkOutputFiles,
     SubmitClientWorkAdditionalActivity,
     SubmitClientWorkAdditionalFiles,
+    SubmitReviewByView,
 
     WorkCategoryUploadDocumentRequiredBulkCreateAPIView,
     WorkCategoryActivityListBulkCreateAPIView,
     WorkCategoryOutputFileBulkCreateAPIView,
+
+    ConsolidatedTaskDetailsWithExpensesAndBillingView,
 )
 
 urlpatterns = [
@@ -103,7 +106,12 @@ urlpatterns = [
     path('submit-client-work/additional-files/<int:assignment_id>/', SubmitClientWorkAdditionalFiles.as_view(), name="submit-client-work-additional-files"),
     path('submit-client-work/additional-activity/<int:assignment_id>/', SubmitClientWorkAdditionalActivity.as_view(), name="submit-client-work-additional-activities"),
 
+    path('submit-client-work/review-submission/<int:assignment_id>/', SubmitReviewByView.as_view(), name="submit-client-work-review-submission"),
+
     path('bulk-upload/required-files/', WorkCategoryUploadDocumentRequiredBulkCreateAPIView.as_view(), name="files-required-bulk-create"),
     path('bulk-upload/activity-list/', WorkCategoryActivityListBulkCreateAPIView.as_view(), name="activity-list-bulk-create"),
     path('bulk-upload/output-files/', WorkCategoryOutputFileBulkCreateAPIView.as_view(), name="output-files-bulk-create"),
+
+    path('reports/consolidate-task/', ConsolidatedTaskDetailsWithExpensesAndBillingView.as_view(), name="consolidate-task-details"),
+
 ]
