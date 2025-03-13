@@ -48,8 +48,6 @@ class Customer(models.Model):
     din_number = models.CharField(max_length=50, blank=True, null=True)
 
     # Personal details
-    first_name = models.CharField(max_length=50, blank=True, null=True)
-    last_name = models.CharField(max_length=50, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
     pan_no = models.CharField(max_length=50, blank=True, null=True)
 
@@ -68,3 +66,76 @@ class Customer(models.Model):
 
     def __str__(self):
         return f"{self.name_of_business} ({self.customer_code})"
+
+
+class CustomerContacts(models.Model):
+    id = models.AutoField(primary_key=True)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="customer_contact")
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100, null=True, blank=True)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    mobile = models.CharField(max_length=15, blank=True, null=True)
+    designation = models.CharField(max_length=100, blank=True, null=True)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="customer_contact_created_by")
+    created_date = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="customer_contact_updated_by")
+    updated_date = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.first_name} ({self.designation})"
+
+
+class CustomerGroups(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="customer_group_created_by")
+    created_date = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="customer_group_updated_by")
+    updated_date = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class CustomerGroupMapping(models.Model):
+    id = models.AutoField(primary_key=True)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="customer_group_mapping")
+    group = models.ForeignKey(CustomerGroups, on_delete=models.CASCADE, related_name="customer_group_mapping")
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="customer_group_mapping_created_by")
+    created_date = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="customer_group_mapping_updated_by")
+    updated_date = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.customer} ({self.group.name})"
+    
+
+class CustomerBranch(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="customer_branch_created_by")
+    created_date = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="customer_branch_updated_by")
+    updated_date = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name}"
+    
+
+class CustomerBranchMapping(models.Model):
+    id = models.AutoField(primary_key=True)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="customer_branch_mapping")
+    branch = models.ForeignKey(CustomerBranch, on_delete=models.CASCADE, related_name="customer_branch_mapping")
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="customer_branch_mapping_created_by")
+    created_date = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="customer_branch_mapping_updated_by")
+    updated_date = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.customer} ({self.branch.name})"

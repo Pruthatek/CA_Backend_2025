@@ -5,11 +5,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
-from .models import Customer
+from .models import Customer, CustomerContacts, CustomerGroups, CustomerBranch, CustomerBranchMapping, CustomerGroupMapping
 from custom_auth.models import CustomUser  # Update with your user model path
 import pandas as pd
 from django.db import transaction
-
+from workflow.views import ModifiedApiview 
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +23,17 @@ def get_customer_object(pk):
 
 
 # Create Customer
-class CustomerCreateAPIView(APIView):
+class CustomerCreateAPIView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        logger.info(f"Attempting to create new customer with data: {request.data}")
+        user = self.get_user_from_token(request)
+        if not user:
+            return Response(
+                {"error": "Invalid user or You are not authorized to perform this action."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        # logger.info(f"Attempting to create new customer with data: {request.data}")
         
         try:
             # Extract data from request
@@ -84,8 +90,6 @@ class CustomerCreateAPIView(APIView):
                 cin_number=data.get("cin_number"),
                 llipin_number=data.get("llipin_number"),
                 din_number=data.get("din_number"),
-                first_name=data.get("first_name"),
-                last_name=data.get("last_name"),
                 date_of_birth=data.get("date_of_birth"),
                 pan_no=data.get("pan_no"),
                 enable_account=data.get("enable_account", True),
@@ -93,6 +97,44 @@ class CustomerCreateAPIView(APIView):
                 accountant_phone=data.get("accountant_phone"),
                 created_by=request.user,
             )
+            contacts = data.get("contacts", [])
+            for contact in contacts:
+                CustomerContacts.objects.create(
+                    customer=customer,
+                    first_name=contact.get("first_name"),
+                    last_name=contact.get("last_name"),
+                    email=contact.get("email", None),
+                    phone=contact.get("phone", None),
+                    mobile=contact.get("mobile", None),
+                    designation=contact.get("designation"),
+                    created_by=request.user,
+                )
+            
+            # Save customer group mapping
+            group_id = data.get("customer_group", None)
+            if group_id:
+                group = CustomerGroups.objects.filter(id=group_id, is_active=True).first()
+                if group:
+                    CustomerGroupMapping.objects.create(
+                        customer=customer,
+                        group=group,
+                        created_by=request.user,
+                    )
+                else:
+                    return Response({"error": "Invalid customer group."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Save customer branch mapping
+            branch_id = data.get("customer_branch", None)
+            if branch_id:
+                branch = CustomerBranch.objects.filter(id=branch_id, is_active=True).first()
+                if branch:
+                    CustomerBranchMapping.objects.create(
+                        customer=customer,
+                        branch=branch,
+                        created_by=request.user,
+                    )
+                else:
+                    return Response({"error": "Invalid customer branch."}, status=status.HTTP_400_BAD_REQUEST)
             
             logger.info(f"Customer created successfully: {customer.id}")
             return Response(
@@ -117,11 +159,17 @@ class CustomerCreateAPIView(APIView):
 
 
 # List Customers
-class CustomerListAPIView(APIView):
+class CustomerListAPIView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
             customers = Customer.objects.filter(is_active=True).values(
                 "id",
                 "name_of_business",
@@ -142,8 +190,6 @@ class CustomerListAPIView(APIView):
                 "cin_number",
                 "llipin_number",
                 "din_number",
-                "first_name",
-                "last_name",
                 "date_of_birth",
                 "pan_no",
                 "enable_account",
@@ -166,11 +212,17 @@ class CustomerListAPIView(APIView):
 
 
 # Retrieve Customer
-class CustomerRetrieveAPIView(APIView):
+class CustomerRetrieveAPIView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
             customer = get_customer_object(pk)
             customer_data = {
                 "id": customer.id,
@@ -192,13 +244,14 @@ class CustomerRetrieveAPIView(APIView):
                 "cin_number": customer.cin_number,
                 "llipin_number": customer.llipin_number,
                 "din_number": customer.din_number,
-                "first_name": customer.first_name,
-                "last_name": customer.last_name,
                 "date_of_birth": customer.date_of_birth,
                 "pan_no": customer.pan_no,
                 "enable_account": customer.enable_account,
                 "accountant_name": customer.accountant_name,
                 "accountant_phone": customer.accountant_phone,
+                "contacts": list(customer.customer_contact.values("first_name", "last_name", "email", "phone", "mobile", "designation")),
+                "customer_group": customer.customer_group_mapping.first().group.name if customer.customer_group_mapping.exists() else None,
+                "customer_branch": customer.customer_branch_mapping.first().branch.name if customer.customer_branch_mapping.exists() else None,
             }
             logger.info(f"Successfully retrieved customer with id {pk}")
             return Response(customer_data)
@@ -214,13 +267,19 @@ class CustomerRetrieveAPIView(APIView):
 
 
 # Update Customer
-class CustomerUpdateAPIView(APIView):
+class CustomerUpdateAPIView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, pk):
         logger.info(f"Attempting to update customer {pk} with data: {request.data}")
         
         try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
             customer = Customer.objects.get(id=pk)
             data = request.data
 
@@ -272,8 +331,6 @@ class CustomerUpdateAPIView(APIView):
             customer.cin_number = data.get('cin_number', customer.cin_number)
             customer.llipin_number = data.get('llipin_number', customer.llipin_number)
             customer.din_number = data.get('din_number', customer.din_number)
-            customer.first_name = data.get('first_name', customer.first_name)
-            customer.last_name = data.get('last_name', customer.last_name)
             customer.date_of_birth = data.get('date_of_birth', customer.date_of_birth)
             customer.pan_no = data.get('pan_no', customer.pan_no)
             customer.enable_account = data.get('enable_account', customer.enable_account)
@@ -281,6 +338,68 @@ class CustomerUpdateAPIView(APIView):
             customer.accountant_phone = data.get('accountant_phone', customer.accountant_phone)
 
             customer.save()
+
+            new_contacts = data.get("new_contacts", [])
+            if new_contacts:
+                for contact in new_contacts:
+                    CustomerContacts.objects.create(
+                        customer=customer,
+                        first_name=contact.get("first_name"),
+                        last_name=contact.get("last_name"),
+                        email=contact.get("email", None),
+                        phone=contact.get("phone", None),
+                        mobile=contact.get("mobile", None),
+                        designation=contact.get("designation"),
+                        created_by=request.user,
+                    )
+    
+            updated_contacts = data.get("updated_contacts", [])
+            if updated_contacts:
+                for contact in updated_contacts:
+                    CustomerContacts.objects.filter(id=contact.get("id")).update(
+                        customer=customer,
+                        first_name=contact.get("first_name"),
+                        last_name=contact.get("last_name"),
+                        email=contact.get("email", None),
+                        phone=contact.get("phone", None),
+                        mobile=contact.get("mobile", None),
+                        designation=contact.get("designation"),
+                        updated_by=request.user,
+                    )
+            deleted_contacts = data.get("deleted_contacts", [])
+            if deleted_contacts:
+                for contact_id in deleted_contacts:
+                    CustomerContacts.objects.filter(id=contact_id).delete()
+
+            # Save customer group mapping
+            group_id = data.get("customer_group", None)
+            if group_id:
+                group = CustomerGroups.objects.filter(id=group_id, is_active=True).first()
+                previous_group = customer.customer_group_mapping.first().group if customer.customer_group_mapping.exists() else None
+                if previous_group:
+                    customer.customer_group_mapping.first().delete()
+                if group:
+                    CustomerGroupMapping.objects.create(
+                        customer=customer,
+                        group=group,
+                        created_by=request.user,
+                    )
+                else:
+                    return Response({"error": "Invalid customer group."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Save customer branch mapping
+            branch_id = data.get("customer_branch", None)
+            if branch_id:
+                branch = CustomerBranch.objects.filter(id=branch_id, is_active=True).first()
+                if branch:
+                    CustomerBranchMapping.objects.create(
+                        customer=customer,
+                        branch=branch,
+                        created_by=request.user,
+                    )
+                else:
+                    return Response({"error": "Invalid customer branch."}, status=status.HTTP_400_BAD_REQUEST)
+    
             
             logger.info(f"Customer {pk} updated successfully")
             return Response(
@@ -310,13 +429,19 @@ class CustomerUpdateAPIView(APIView):
 
 
 # Delete Customer (Soft Delete)
-class CustomerDeleteAPIView(APIView):
+class CustomerDeleteAPIView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk):
         logger.info(f"Attempting soft delete of customer {pk}")
         
         try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
             customer = get_customer_object(pk)
             customer.is_active = False
             customer.save()
@@ -332,10 +457,16 @@ class CustomerDeleteAPIView(APIView):
             )
         
 
-class CustomerBulkCreateExcelAPIView(APIView):
+class CustomerBulkCreateExcelAPIView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        user = self.get_user_from_token(request)
+        if not user:
+            return Response(
+                {"error": "Invalid user or You are not authorized to perform this action."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         logger.info("Attempting bulk create customers from Excel file")
         
         excel_file = request.FILES.get("file")
@@ -446,3 +577,172 @@ class CustomerBulkCreateExcelAPIView(APIView):
         except Exception as e:
             logger.error(f"Error during bulk customer creation: {e}")
             return Response({"error": "Failed to create customers"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# CustomerBranch Views
+
+class CustomerBranchCreateView(ModifiedApiview):
+    def post(self, request):
+        user = self.get_user_from_token(request)
+        if not user:
+            return Response(
+                {"error": "Invalid user or You are not authorized to perform this action."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        data = request.data
+        branch = CustomerBranch.objects.create(
+            name=data.get('name'),
+            created_by=user,
+            updated_by=user,
+            is_active=True
+        )
+        return Response({'id': branch.id, 'name': branch.name}, status=status.HTTP_201_CREATED)
+
+
+class CustomerBranchListView(ModifiedApiview):
+    def get(self, request):
+        user = self.get_user_from_token(request)
+        if not user:
+            return Response(
+                {"error": "Invalid user or You are not authorized to perform this action."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        branches = CustomerBranch.objects.filter(is_active=True)
+        branches_data = [{'id': branch.id, 'name': branch.name} for branch in branches]
+        return Response(branches_data, status=status.HTTP_200_OK)
+
+
+class CustomerBranchDetailView(ModifiedApiview):
+    def get(self, request, branch_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            branch = CustomerBranch.objects.get(id=branch_id, is_active=True)
+            branch_data = {'id': branch.id, 'name': branch.name}
+            return Response(branch_data, status=status.HTTP_200_OK)
+        except CustomerBranch.DoesNotExist:
+            return Response({'error': 'Branch not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CustomerBranchUpdateView(ModifiedApiview):
+    def put(self, request, branch_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            branch = CustomerBranch.objects.get(id=branch_id)
+            data = request.data
+            branch.name = data.get('name', branch.name)
+            branch.updated_by_id = user
+            branch.save()
+            return Response({'id': branch.id, 'name': branch.name}, status=status.HTTP_200_OK)
+        except CustomerBranch.DoesNotExist:
+            return Response({'error': 'Branch not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CustomerBranchDeleteView(ModifiedApiview):
+    def delete(self, request, branch_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            branch = CustomerBranch.objects.get(id=branch_id)
+            branch.is_active = False
+            branch.save()
+            return Response({'message': 'Branch deactivated successfully'}, status=status.HTTP_200_OK)
+        except CustomerBranch.DoesNotExist:
+            return Response({'error': 'Branch not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# CustomerGroups Views
+
+class CustomerGroupCreateView(ModifiedApiview):
+    def post(self, request):
+        user = self.get_user_from_token(request)
+        if not user:
+            return Response(
+                {"error": "Invalid user or You are not authorized to perform this action."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        data = request.data
+        group = CustomerGroups.objects.create(
+            name=data.get('name'),
+            created_by=user,
+            updated_by=user,
+            is_active=True
+        )
+        return Response({'id': group.id, 'name': group.name}, status=status.HTTP_201_CREATED)
+
+
+class CustomerGroupListView(ModifiedApiview):
+    def get(self, request):
+        user = self.get_user_from_token(request)
+        if not user:
+            return Response(
+                {"error": "Invalid user or You are not authorized to perform this action."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        groups = CustomerGroups.objects.filter(is_active=True)
+        groups_data = [{'id': group.id, 'name': group.name} for group in groups]
+        return Response(groups_data, status=status.HTTP_200_OK)
+
+
+class CustomerGroupDetailView(ModifiedApiview):
+    def get(self, request, group_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            group = CustomerGroups.objects.get(id=group_id, is_active=True)
+            group_data = {'id': group.id, 'name': group.name}
+            return Response(group_data, status=status.HTTP_200_OK)
+        except CustomerGroups.DoesNotExist:
+            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CustomerGroupUpdateView(ModifiedApiview):
+    def put(self, request, group_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            group = CustomerGroups.objects.get(id=group_id)
+            data = request.data
+            group.name = data.get('name', group.name)
+            group.updated_by_id = user
+            group.save()
+            return Response({'id': group.id, 'name': group.name}, status=status.HTTP_200_OK)
+        except CustomerGroups.DoesNotExist:
+            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CustomerGroupDeleteView(ModifiedApiview):
+    def delete(self, request, group_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Invalid user or You are not authorized to perform this action."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            group = CustomerGroups.objects.get(id=group_id)
+            group.is_active = False
+            group.save()
+            return Response({'message': 'Group deactivated successfully'}, status=status.HTTP_200_OK)
+        except CustomerGroups.DoesNotExist:
+            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
