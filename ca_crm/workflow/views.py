@@ -1475,7 +1475,7 @@ class SubmitReviewByView(ModifiedApiview):
                 {
                     "message": "Assignment updated successfully.",
                     "assignment": {
-                        "id": assignment.id,
+                        "id": assignment.assignment_id,
                         "customer": assignment.customer.name_of_business,
                         "work_category": assignment.work_category.name,
                         "assigned_to": assignment.assigned_to.username if assignment.assigned_to else None,
