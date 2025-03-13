@@ -744,6 +744,7 @@ class ClientWorkCategoryAssignmentCreateView(ModifiedApiview):
                     assigned_to=assigned_to,
                     assigned_by=assigned_by,
                     review_by=review_by,
+                    allocated_hours=data.get("allocated_hours", 0),
                     task_name=data.get("task_name", ""),
                     progress=data.get("status", "pending_from_client_side"),
                     priority=data.get("priority", 1),
@@ -924,6 +925,7 @@ class ClientWorkCategoryAssignmentListView(ModifiedApiview):
                 data.append({
                     "id": assignment.assignment_id,
                     "task_name": assignment.task_name,
+                    "customer_id": assignment.customer.id,
                     "customer": assignment.customer.name_of_business,
                     "work_category": assignment.work_category.name,
                     "work_category_id": assignment.work_category.id,
@@ -1287,7 +1289,7 @@ class EditAssignedTaskView(ModifiedApiview):
             user = self.get_user_from_token(request)
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
-            assignment = ClientWorkCategoryAssignment.objects.get(id=assignment_id)
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id)
 
             # Update fields only if they are provided
             if "customer_id" in data:
@@ -1355,7 +1357,7 @@ class RetrieveAssignedTaskView(ModifiedApiview):
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
             if assignment_id:
-                assignment = ClientWorkCategoryAssignment.objects.get(id=assignment_id)
+                assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id)
                 data = {
                     "id": assignment.id,
                     "customer": assignment.customer.name_of_business,
@@ -1461,7 +1463,7 @@ class SubmitReviewByView(ModifiedApiview):
             user = self.get_user_from_token(request)
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
-            assignment = ClientWorkCategoryAssignment.objects.get(id=assignment_id)
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id)
             assignment.review_by = request.user
             assignment.review_notes = data.get("review_notes", assignment.review_notes)
             assignment.progress = data.get("progress", assignment.progress)
