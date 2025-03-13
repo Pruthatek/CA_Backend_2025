@@ -49,14 +49,14 @@ class ClockInOutAPIView(ModifiedApiview):
                         attendance.save()
                     attendance.check_out = ist_now.time()
                     attendance.save()
-                    return Response({"message": "Clock-out successful"}, status=status.HTTP_status.HTTP_200_OK_OK)
+                    return Response({"message": "Clock-out successful"}, status=status.HTTP_200_OK)
 
             return Response({"message": "Clock-in successful"}, status=status.HTTP_201_CREATED)
 
         except CustomUser.DoesNotExist:
-            return Response({"error": "Employee profile not found"}, status=status.HTTP_status.HTTP_404_NOT_FOUND_NOT_FOUND)
+            return Response({"error": "Employee profile not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_status.HTTP_500_INTERNAL_SERVER_ERROR_INTERNAL_SERVER_ERROR)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 class CheckClockInStatusAPIView(ModifiedApiview):
