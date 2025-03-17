@@ -42,6 +42,7 @@ class Customer(models.Model):
     secondary_email_id = models.EmailField(blank=True, null=True)
 
     # GST and registration fields
+    destination_address = models.CharField(max_length=200, blank=True, null=True)
     gst_no = models.CharField(max_length=400, blank=True, null=True)
     gst_state_code = models.CharField(max_length=10, blank=True, null=True)
     cin_number = models.CharField(max_length=50, blank=True, null=True)

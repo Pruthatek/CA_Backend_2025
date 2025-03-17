@@ -87,6 +87,7 @@ class CustomerCreateAPIView(ModifiedApiview):
                 secondary_email_id=data.get("secondary_email_id"),
                 gst_no=data.get("gst_no"),
                 gst_state_code=data.get("gst_state_code"),
+                destination_address=data.get("destination_address", None),
                 cin_number=data.get("cin_number"),
                 llipin_number=data.get("llipin_number"),
                 din_number=data.get("din_number"),
@@ -229,7 +230,10 @@ class CustomerRetrieveAPIView(ModifiedApiview):
                 "name_of_business": customer.name_of_business,
                 "customer_code": customer.customer_code,
                 "status": customer.status,
+                "business_pan_no": customer.business_pan_no,
+                "file_no": customer.file_no,
                 "address": customer.address,
+                "road": customer.road,
                 "city": customer.city,
                 "state": customer.state,
                 "country": customer.country,
@@ -239,6 +243,8 @@ class CustomerRetrieveAPIView(ModifiedApiview):
                 "mobile": customer.mobile,
                 "additional_contact_number": customer.additional_contact_number,
                 "secondary_email_id": customer.secondary_email_id,
+                "destination_address": customer.destination_address,
+                "dcs": customer.dsc,
                 "gst_no": customer.gst_no,
                 "gst_state_code": customer.gst_state_code,
                 "cin_number": customer.cin_number,
@@ -328,6 +334,7 @@ class CustomerUpdateAPIView(ModifiedApiview):
             customer.secondary_email_id = data.get('secondary_email_id', customer.secondary_email_id)
             customer.gst_no = data.get('gst_no', customer.gst_no)
             customer.gst_state_code = data.get('gst_state_code', customer.gst_state_code)
+            customer.destination_address = data.get("destination_address", customer.destination_address)
             customer.cin_number = data.get('cin_number', customer.cin_number)
             customer.llipin_number = data.get('llipin_number', customer.llipin_number)
             customer.din_number = data.get('din_number', customer.din_number)
