@@ -106,7 +106,6 @@ class CustomerCreateAPIView(ModifiedApiview):
                     last_name=contact.get("last_name"),
                     email=contact.get("email", None),
                     phone=contact.get("phone", None),
-                    mobile=contact.get("mobile", None),
                     designation=contact.get("designation"),
                     created_by=request.user,
                 )
@@ -255,7 +254,7 @@ class CustomerRetrieveAPIView(ModifiedApiview):
                 "enable_account": customer.enable_account,
                 "accountant_name": customer.accountant_name,
                 "accountant_phone": customer.accountant_phone,
-                "contacts": list(customer.customer_contact.values("first_name", "last_name", "email", "phone", "mobile", "designation", "id")),
+                "contacts": list(customer.customer_contact.values("first_name", "last_name", "email", "phone", "designation", "id")),
                 "customer_group": customer.customer_group_mapping.first().group.name if customer.customer_group_mapping.exists() else None,
                 "customer_branch": customer.customer_branch_mapping.first().branch.name if customer.customer_branch_mapping.exists() else None,
             }
@@ -338,6 +337,7 @@ class CustomerUpdateAPIView(ModifiedApiview):
             customer.cin_number = data.get('cin_number', customer.cin_number)
             customer.llipin_number = data.get('llipin_number', customer.llipin_number)
             customer.din_number = data.get('din_number', customer.din_number)
+            customer.dsc = data.get('dcs', customer.dsc)
             customer.date_of_birth = data.get('date_of_birth', customer.date_of_birth)
             customer.pan_no = data.get('pan_no', customer.pan_no)
             customer.enable_account = data.get('enable_account', customer.enable_account)
@@ -355,7 +355,6 @@ class CustomerUpdateAPIView(ModifiedApiview):
                         last_name=contact.get("last_name"),
                         email=contact.get("email", None),
                         phone=contact.get("phone", None),
-                        mobile=contact.get("mobile", None),
                         designation=contact.get("designation"),
                         created_by=request.user,
                     )
@@ -369,7 +368,6 @@ class CustomerUpdateAPIView(ModifiedApiview):
                         last_name=contact.get("last_name"),
                         email=contact.get("email", None),
                         phone=contact.get("phone", None),
-                        mobile=contact.get("mobile", None),
                         designation=contact.get("designation"),
                         updated_by=request.user,
                     )

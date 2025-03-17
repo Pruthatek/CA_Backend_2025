@@ -77,7 +77,6 @@ class CustomerContacts(models.Model):
     last_name = models.CharField(max_length=100, null=True, blank=True)
     email = models.EmailField(blank=True, null=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
-    mobile = models.CharField(max_length=15, blank=True, null=True)
     designation = models.CharField(max_length=100, blank=True, null=True)
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="customer_contact_created_by")
     created_date = models.DateTimeField(auto_now_add=True)
