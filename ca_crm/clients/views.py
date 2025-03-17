@@ -300,7 +300,7 @@ class CustomerUpdateAPIView(ModifiedApiview):
             # Validate status
             if 'status' in data:
                 if data['status'] not in ["proprietor", "firm", "private_limited", "public_limited", 
-                                        "bank", "aop_or_boi", "huf", "ajp", "society"]:
+                                        "bank", "aop_or_boi", "huf", "ajp", "society", "individual"]:
                     return Response({"error": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
                 
                 if data['status'] == "private_limited" and not data.get('cin_number') and not customer.cin_number:
