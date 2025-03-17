@@ -13,6 +13,7 @@ class Customer(models.Model):
         ("huf", "HUF"),
         ("ajp", "AJP"),
         ("society", "Society"),
+        ("individual", "Individual"),
     ]
     DCS_CHOICES = [("new_dcs", "New DCS"), 
                    ("received", "Received"), 

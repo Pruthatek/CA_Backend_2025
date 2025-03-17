@@ -55,7 +55,7 @@ class CustomerCreateAPIView(ModifiedApiview):
                 )
 
             if data.get("status") not in ["proprietor", "firm", "private_limited", "public_limited", 
-                                          "bank", "aop_or_boi", "huf", "ajp", "society",]:
+                                          "bank", "aop_or_boi", "huf", "ajp", "society", "individual"]:
                 return Response({"error": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
 
             if data.get("dcs") not in ["new_dcs", "received", "not_received", "na"]:
@@ -249,7 +249,7 @@ class CustomerRetrieveAPIView(ModifiedApiview):
                 "enable_account": customer.enable_account,
                 "accountant_name": customer.accountant_name,
                 "accountant_phone": customer.accountant_phone,
-                "contacts": list(customer.customer_contact.values("first_name", "last_name", "email", "phone", "mobile", "designation")),
+                "contacts": list(customer.customer_contact.values("first_name", "last_name", "email", "phone", "mobile", "designation", "id")),
                 "customer_group": customer.customer_group_mapping.first().group.name if customer.customer_group_mapping.exists() else None,
                 "customer_branch": customer.customer_branch_mapping.first().branch.name if customer.customer_branch_mapping.exists() else None,
             }
