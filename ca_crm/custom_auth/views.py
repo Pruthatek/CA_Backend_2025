@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import CustomUser, Permission, Role, RolePermission, EmployeeProfile, ReportingUser
+from .models import CustomUser, Permission, Role, RolePermission, EmployeeProfile, ReportingUser, FamilyMemberDetails
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.hashers import check_password
@@ -89,6 +89,17 @@ class CreateEmployeeView(APIView):
 
                 # Create ReportingUser entry
 
+            family_data = data.get('family_details', [])
+            if family_data:
+                for member in family_data:
+                    FamilyMemberDetails.objects.create(
+                        user=user,
+                        name=member.get('name'),
+                        relationship=member.get('relation'),
+                        contact_no=member.get('contact_number'),
+                        email=member.get('email'),
+                        is_active=True,
+                    )
 
             # Generate JWT tokens
             return Response(
@@ -119,7 +130,7 @@ class EmployeeListView(APIView):
         # Fetch Employee data with related user and reporting details
         employees = EmployeeProfile.objects.select_related('user').filter(is_active=True, user__is_active=True)
         reporting_data = ReportingUser.objects.select_related('user', 'reporting_to', 'working_under').filter(is_active=True, user__is_active=True)
-
+        family_members = FamilyMemberDetails.objects.select_related('user').filter(is_active=True, user__is_active=True)
         # Convert QuerySets to lists of dictionaries
         employee_data = [
             {
@@ -140,12 +151,25 @@ class EmployeeListView(APIView):
             for rep in reporting_data
         }
 
+        family_dict = {
+            member.user.id: {
+                "id"
+                "name": member.name,
+                "relation": member.relationship,
+                "contact_number": member.contact_no,
+                "email": member.email,
+            }
+            for member in family_members
+        }
+
         # Convert to DataFrame for fast processing
         df_employees = pd.DataFrame(employee_data)
         df_reporting = pd.DataFrame.from_dict(reporting_dict, orient="index").reset_index().rename(columns={"index": "user_id"})
+        df_family = pd.DataFrame.from_dict(family_dict, orient="index").reset_index().rename(columns={"index": "user_id"})
 
         # Merge DataFrames
         df_merged = pd.merge(df_employees, df_reporting, how="left", left_on="employee_name", right_on="user_id")
+        df_merged = pd.merge(df_merged, df_family, how="left", left_on="employee_id", right_on="user_id")
         df_merged.drop(columns=["user_id"], inplace=True)
 
         # Replace NaN values with None
@@ -176,6 +200,20 @@ class RetrieveEmployeeView(APIView):
             except ReportingUser.DoesNotExist:
                 reporting_data = None
 
+            try:
+                family_members = FamilyMemberDetails.objects.filter(user=user, is_active=True)
+                family_data = [
+                    {
+                        "name": member.name,
+                        "relation": member.relationship,
+                        "contact_number": member.contact_no,
+                        "email": member.email,
+                    }
+                    for member in family_members
+                ]
+            except FamilyMemberDetails.DoesNotExist:
+                family_data = []
+
             data = {
                 "user": {
                     "id": user.id,
@@ -194,6 +232,7 @@ class RetrieveEmployeeView(APIView):
                     "is_active": employee_profile.is_active,
                     "login_enabled": employee_profile.login_enabled,
                 },
+                "family_details": family_data
             }
 
             if reporting_data:
@@ -214,8 +253,10 @@ class UpdateEmployeeView(APIView):
         try:
             user = CustomUser.objects.get(id=user_id)
             employee_profile = EmployeeProfile.objects.get(user=user)
-            reporting_user = ReportingUser.objects.get(user=user)
-
+            try:
+                reporting_user = ReportingUser.objects.get(user=user)
+            except ReportingUser.DoesNotExist:
+                reporting_user = None
             # Update user fields
             user.first_name = data.get('first_name', user.first_name)
             user.last_name = data.get('last_name', user.last_name)
@@ -233,18 +274,56 @@ class UpdateEmployeeView(APIView):
             employee_profile.save()
 
             # Update reporting user only if mappings change
-            if 'reporting_to' in data:
-                new_reporting_to = CustomUser.objects.get(id=data['reporting_to']) if data['reporting_to'] else None
-                if reporting_user.reporting_to != new_reporting_to:
-                    reporting_user.reporting_to = new_reporting_to
+            if reporting_user:
+                if 'reporting_to' in data:
+                    new_reporting_to = CustomUser.objects.get(id=data['reporting_to']) if data['reporting_to'] else None
+                    if reporting_user.reporting_to != new_reporting_to:
+                        reporting_user.reporting_to = new_reporting_to
 
-            if 'working_under' in data:
-                new_working_under = CustomUser.objects.get(id=data['working_under']) if data['working_under'] else None
-                if reporting_user.working_under != new_working_under:
-                    reporting_user.working_under = new_working_under
+                if 'working_under' in data:
+                    new_working_under = CustomUser.objects.get(id=data['working_under']) if data['working_under'] else None
+                    if reporting_user.working_under != new_working_under:
+                        reporting_user.working_under = new_working_under
+                reporting_user.is_active = data.get('is_active', reporting_user.is_active)
+                reporting_user.save()
 
-            reporting_user.is_active = data.get('is_active', reporting_user.is_active)
-            reporting_user.save()
+            # Update family members
+            if 'family_members' in data:
+                family_members_data = data['family_members']
+                existing_family_members = FamilyMemberDetails.objects.filter(user=user)
+
+                # Create a set of existing family member IDs
+                existing_family_member_ids = set(existing_family_members.values_list('id', flat=True))
+
+                # Iterate through the provided family members data
+                for member_data in family_members_data:
+                    member_id = member_data.get('id')
+                    if member_id:
+                        # Update existing family member
+                        family_member = existing_family_members.get(id=member_id)
+                        family_member.name = member_data.get('name', family_member.name)
+                        family_member.relationship = member_data.get('relationship', family_member.relationship)
+                        family_member.contact_no = member_data.get('contact_no', family_member.contact_no)
+                        family_member.email = member_data.get('email', family_member.email)
+                        family_member.is_active = member_data.get('is_active', family_member.is_active)
+                        family_member.save()
+
+                        # Remove the ID from the set of existing IDs
+                        existing_family_member_ids.discard(member_id)
+                    else:
+                        # Create a new family member
+                        FamilyMemberDetails.objects.create(
+                            user=user,
+                            name=member_data.get('name'),
+                            relationship=member_data.get('relationship'),
+                            contact_no=member_data.get('contact_no'),
+                            email=member_data.get('email'),
+                            is_active=member_data.get('is_active', True)
+                        )
+
+                # Delete family members that were not included in the request
+                if existing_family_member_ids:
+                    FamilyMemberDetails.objects.filter(id__in=existing_family_member_ids).delete()
 
             return Response({"message": "User updated successfully"}, status=status.HTTP_200_OK)
         except CustomUser.DoesNotExist:
@@ -562,3 +641,74 @@ class RolePermissionRemoveAPIView(APIView):
             return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
         except Permission.DoesNotExist:
             return Response({"error": "One or more permissions not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class BulkCreateEmployeeView(APIView):
+    def post(self, request):
+        try:
+            excel_file = request.FILES.get("file")
+            if not excel_file:
+                return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Read the Excel file
+            df = pd.read_excel(excel_file)
+            
+            created_users = []
+            errors = []
+            
+            for _, row in df.iterrows():
+                try:
+                    # Handle photo upload if provided
+                    photo_url = row.get("photo_url", "")
+                    logo_url = ""
+                    if photo_url:
+                        extension = os.path.splitext(photo_url)[1]
+                        short_unique_filename = generate_short_unique_filename(extension)
+                        fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'photo_urls'))
+                        logo_path = fs.save(short_unique_filename, photo_url)
+                        logo_url = os.path.join('media/photo_urls', logo_path)
+                    
+                    # Create user
+                    user = CustomUser.objects.create(
+                        username=row["username"],
+                        email=row["email"],
+                        password=make_password(row["password"]),
+                        first_name=row.get("first_name", ""),
+                        last_name=row.get("last_name", ""),
+                        gender=row.get("gender", ""),
+                        phone_number=row.get("phone_number", ""),
+                        employee_code=row.get("employee_code", ""),
+                        address=row.get("address", ""),
+                        photo_url=logo_url,
+                        role=Role.objects.get(name=row.get("role", "employee")),
+                    )
+                    
+                    # Create EmployeeProfile
+                    EmployeeProfile.objects.create(
+                        user=user,
+                        date_of_joining=row.get("date_of_joining"),
+                        date_of_leaving=row.get("date_of_leaving", None),
+                        referred_by=row.get("referred_by", ""),
+                        designation=row.get("designation", ""),
+                        is_active=row.get("is_active", True),
+                        login_enabled=row.get("login_enabled", True),
+                    )
+                    
+                    # Create ReportingUser
+                    if row.get("reporting_to") and row.get("working_under"):
+                        reporting_to_user = CustomUser.objects.get(id=row["reporting_to"])
+                        working_under_user = CustomUser.objects.get(id=row["working_under"])
+                        ReportingUser.objects.create(
+                            user=user,
+                            reporting_to=reporting_to_user,
+                            working_under=working_under_user,
+                            is_active=True,
+                        )
+                    
+                    created_users.append({"username": user.username, "email": user.email})
+                except Exception as e:
+                    errors.append({"username": row.get("username"), "error": str(e)})
+            
+            return Response({"created_users": created_users, "errors": errors}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
