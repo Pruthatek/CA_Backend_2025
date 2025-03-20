@@ -45,7 +45,7 @@ class CustomUser(models.Model):
     employee_code = models.CharField(max_length=20, null=True, blank=True)
     gender = models.CharField(max_length=20, null=True, blank=True)
     photo_url = models.CharField(max_length=255, null=True, blank=True)
-    address = models.TextField(null=True, blank=True)
+    address = models.CharField(max_length=255, null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_date = models.DateTimeField(auto_now_add=True)
