@@ -6,6 +6,7 @@ from rest_framework import status
 from .models import Location, Inward, Outward
 from custom_auth.models import CustomUser
 from clients.models import Customer
+from workflow.models import ClientWorkCategoryAssignment
 import uuid
 import time
 from datetime import date, datetime
@@ -206,6 +207,7 @@ class InwardCreateView(ModifiedApiview):
             description = request.data.get('description')
             location_id = request.data.get('location')
             through = request.data.get('through')
+            task = request.data.get('assigned_task', None)
 
             # Validate required fields
             if not all([company, inward_for, inward_type, customer_id, reference_to, inward_title, description, through]):
@@ -217,6 +219,10 @@ class InwardCreateView(ModifiedApiview):
             # Fetch related objects
             customer = get_object_or_404(Customer, id=customer_id)
             location = get_object_or_404(Location, id=location_id) if location_id else None
+            if task:
+                assigned_task = ClientWorkCategoryAssignment.objects.filter(assignment_id=task, is_active=True).first()
+                if not assigned_task:
+                    return Response({"Error":"Selected Task not found"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Handle file upload
             file_url = ""
@@ -236,6 +242,7 @@ class InwardCreateView(ModifiedApiview):
                 reference_to=reference_to,
                 inward_title=inward_title,
                 description=description,
+                task=assigned_task,
                 location=location,
                 file=file_url,
                 through=through,
@@ -253,6 +260,7 @@ class InwardCreateView(ModifiedApiview):
                     "customer": inward_obj.customer.id,
                     "reference_to": inward_obj.reference_to,
                     "inward_title": inward_obj.inward_title,
+                    "task":inward_obj.task,
                     "description": inward_obj.description,
                     "location": inward_obj.location.id if inward_obj.location else None,
                     "file": inward_obj.file,
@@ -294,6 +302,7 @@ class InwardListView(ModifiedApiview):
                     "location_id": inward.location.id if inward.location else None,
                     "location": inward.location.location if inward.location else None,
                     "through": inward.through,
+                    "created_date": inward.created_date
                 },)
             # Return the object as a response
             return Response({"inward_data":inward_list}, status=status.HTTP_200_OK)
@@ -325,6 +334,8 @@ class InwardRetrieveView(ModifiedApiview):
                     "customer_name": inward_obj.customer.name_of_business,
                     "reference_to": inward_obj.reference_to,
                     "inward_title": inward_obj.inward_title,
+                    "assigned_task": inward_obj.task.assignment_id,
+                    "assigned_task_name": inward_obj.task.task_name,
                     "description": inward_obj.description,
                     "location": inward_obj.location.id if inward_obj.location else None,
                     "file": inward_obj.file,
@@ -357,6 +368,14 @@ class InwardUpdateView(ModifiedApiview):
             inward_obj.inward_title = request.data.get('inward_title', inward_obj.inward_title)
             inward_obj.description = request.data.get('description', inward_obj.description)
             inward_obj.through = request.data.get('through', inward_obj.through)
+            task_id = request.data.get("assignment_id", None)
+
+            assigned_task = ClientWorkCategoryAssignment.objects.filter(assignment_id=task_id, is_active=True).first()
+            if not assigned_task:
+                return Response({"Error":"Assigned task not found"}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                inward_obj.task = assigned_task
+
 
             # Update related fields if provided
             customer_id = request.data.get('customer')
@@ -393,6 +412,8 @@ class InwardUpdateView(ModifiedApiview):
                     "description": inward_obj.description,
                     "location": inward_obj.location.id if inward_obj.location else None,
                     "file": inward_obj.file,
+                    "task": inward_obj.task.task_name,
+                    "task_id": inward_obj.task.assignment_id,
                     "through": inward_obj.through,
                     "created_by": inward_obj.created_by.id,
                     "modified_by": inward_obj.modified_by.id,

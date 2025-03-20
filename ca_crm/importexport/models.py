@@ -1,7 +1,7 @@
 from django.db import models
 from clients.models import Customer
 from custom_auth.models import CustomUser
-
+from workflow.models import ClientWorkCategoryAssignment
 
 class Location(models.Model):
     id = models.AutoField(primary_key=True)
@@ -51,6 +51,13 @@ class Inward(models.Model):
         max_length=50,
         choices=REFERENCE_TO_CHOICES,
         verbose_name="Reference To"
+    )
+    task = models.ForeignKey(
+        ClientWorkCategoryAssignment,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='inward_for_task'
     )
     inward_title = models.CharField(max_length=120, verbose_name="Inward Title")
     description = models.TextField(verbose_name="Description / Remarks")
