@@ -1,6 +1,7 @@
 from django.db import models
 from custom_auth.models import CustomUser
 from clients.models import Customer
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Department(models.Model):
@@ -23,6 +24,13 @@ class Department(models.Model):
 
 
 class WorkCategory(models.Model):
+    FREQUENCY_CHOICES = [("daily", "Daily"), 
+                         ("weekly", "Weekly"), 
+                         ("monthly", "Monthly"), 
+                         ("yearly", "Yearly"),
+                         ("quarterly", "Quarterly"),
+                         ("half_yearly", "Half Yearly"),
+                         ("other", "Other")]
     name = models.CharField(max_length=255)
     department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="work_categories")
     fees = models.FloatField(blank=True, null=True, default=0)
@@ -30,6 +38,8 @@ class WorkCategory(models.Model):
         CustomUser, on_delete=models.SET_NULL, null=True, related_name="workcategories_created"
     )
     created_date = models.DateTimeField(auto_now_add=True)
+    frequency = models.CharField(max_length=100, choices=FREQUENCY_CHOICES, blank=True, null=True)
+    start_dates = models.DateField(blank=True, null=True)
     updated_by = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, related_name="workcategories_updated"
     )
@@ -38,6 +48,42 @@ class WorkCategory(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.department.name})"
+
+
+class WorkCategoryDate(models.Model):
+    DATE_TYPE_CHOICES = [
+        ('monthly', 'Monthly (e.g., 13th of every month)'),
+        ('yearly', 'Yearly (e.g., 15th March)'),
+    ]
+
+    work_category = models.ForeignKey(
+        'WorkCategory',
+        on_delete=models.CASCADE,
+        related_name='dates'
+    )
+    date_type = models.CharField(
+        max_length=10,
+        choices=DATE_TYPE_CHOICES,
+        default='monthly'
+    )
+    # For monthly: day of the month (e.g., 15)
+    day = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+        help_text="Day of the month (1-31). Required for all types."
+    )
+    # For yearly: month (e.g., 3 for March)
+    month = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+        help_text="Month (1-12). Required for 'yearly' type."
+    )
+
+    def __str__(self):
+        if self.date_type == 'monthly':
+            return f"Monthly: Day {self.day}"
+        elif self.date_type == 'yearly':
+            return f"Yearly: {self.day}/{self.month}"
 
 
 class WorkCategoryFilesRequired(models.Model):

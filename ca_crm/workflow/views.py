@@ -11,6 +11,7 @@ from .models import (
     WorkCategoryFilesRequired,
     WorkCategoryActivityList,
     WorkCategoryActivityStages,
+    WorkCategoryDate,
     WorkCategoryUploadDocumentRequired,
     ClientWorkCategoryAssignment,
     AssignedWorkRequiredFiles,
@@ -153,31 +154,78 @@ class WorkCategoryCreateAPIView(ModifiedApiview):
             user = self.get_user_from_token(request)
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
             data = request.data
             name = data.get("name")
             department_id = data.get("department")
             fees = data.get("fees", 0)
+            dates = data.get("dates", [])  # List of date entries
 
-            department = Department.objects.filter(id=department_id, is_active=True).first()
-            if not name or not department:
+            # Validate required fields
+            if not name or not department_id:
                 return Response(
                     {"error": "Name and Department are required"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            work_category = WorkCategory.objects.create(
-                name=name,
-                department=department,
-                fees=fees,
-                created_by=user,
-            )
+            # Fetch department
+            department = Department.objects.filter(id=department_id, is_active=True).first()
+            if not department:
+                return Response(
+                    {"error": "Invalid Department"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Use a transaction to ensure atomicity
+            with transaction.atomic():
+                # Create WorkCategory
+                work_category = WorkCategory.objects.create(
+                    name=name,
+                    department=department,
+                    fees=fees,
+                    created_by=user,
+                )
+
+                # Create WorkCategoryDate entries
+                for date_entry in dates:
+                    date_type = date_entry.get("date_type")
+                    day = date_entry.get("day")
+                    month = date_entry.get("month", None)  # Optional for monthly
+
+                    # Validate date_type and day
+                    if not date_type or not day:
+                        raise ValueError("date_type and day are required for each date entry")
+
+                    # Validate month for yearly type
+                    if date_type == "yearly" and not month:
+                        raise ValueError("month is required for yearly date_type")
+
+                    # Create WorkCategoryDate
+                    WorkCategoryDate.objects.create(
+                        work_category=work_category,
+                        date_type=date_type,
+                        day=day,
+                        month=month,
+                    )
+
             return Response(
-                {"message": "Work category created", "id": work_category.id},
+                {
+                    "message": "Work category created successfully",
+                    "id": work_category.id,
+                },
                 status=status.HTTP_201_CREATED,
             )
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 class WorkCategoryGetAPIView(ModifiedApiview):
     def get(self, request, id=None):
@@ -208,19 +256,66 @@ class WorkCategoryUpdateAPIView(ModifiedApiview):
             user = self.get_user_from_token(request)
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
             work_category = WorkCategory.objects.filter(id=id, is_active=True).first()
             if not work_category:
                 return Response({"error": "Work category not found"}, status=status.HTTP_404_NOT_FOUND)
 
             data = request.data
-            work_category.name = data.get("name", work_category.name)
-            work_category.fees = data.get("fees", work_category.fees)
-            work_category.save()
+            name = data.get("name")
+            fees = data.get("fees")
+            dates = data.get("dates", [])  # List of date entries
 
-            return Response({"message": "Work category updated"}, status=status.HTTP_200_OK)
+            # Use a transaction to ensure atomicity
+            with transaction.atomic():
+                # Update WorkCategory fields if provided
+                if name is not None:
+                    work_category.name = name
+                if fees is not None:
+                    work_category.fees = fees
+                work_category.updated_by = user
+                work_category.save()
+
+                # Delete existing WorkCategoryDate entries
+                work_category.dates.all().delete()
+
+                # Create new WorkCategoryDate entries
+                for date_entry in dates:
+                    date_type = date_entry.get("date_type")
+                    day = date_entry.get("day")
+                    month = date_entry.get("month", None)  # Optional for monthly
+
+                    # Validate date_type and day
+                    if not date_type or not day:
+                        raise ValueError("date_type and day are required for each date entry")
+
+                    # Validate month for yearly type
+                    if date_type == "yearly" and not month:
+                        raise ValueError("month is required for yearly date_type")
+
+                    # Create WorkCategoryDate
+                    WorkCategoryDate.objects.create(
+                        work_category=work_category,
+                        date_type=date_type,
+                        day=day,
+                        month=month,
+                    )
+
+            return Response(
+                {"message": "Work category updated successfully"},
+                status=status.HTTP_200_OK,
+            )
+
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 class GetDepartmentWorkCategoriesAPIView(ModifiedApiview):
     def get(self, request, id):
