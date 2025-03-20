@@ -151,27 +151,32 @@ class EmployeeListView(APIView):
             for rep in reporting_data
         }
 
-        family_dict = {
-            member.user.id: {
-                "id"
-                "name": member.name,
-                "relation": member.relationship,
-                "contact_number": member.contact_no,
-                "email": member.email,
-            }
-            for member in family_members
-        }
+        # family_dict = {
+        #     member.user.id: {
+        #         "name": member.name,
+        #         "relation": member.relationship,
+        #         "contact_number": member.contact_no,
+        #         "email": member.email,
+        #     }
+        #     for member in family_members
+        # }
 
         # Convert to DataFrame for fast processing
         df_employees = pd.DataFrame(employee_data)
         df_reporting = pd.DataFrame.from_dict(reporting_dict, orient="index").reset_index().rename(columns={"index": "user_id"})
-        df_family = pd.DataFrame.from_dict(family_dict, orient="index").reset_index().rename(columns={"index": "user_id"})
+        # df_family = pd.DataFrame.from_dict(family_dict, orient="index").reset_index().rename(columns={"index": "user_id"})
 
-        # Merge DataFrames
-        df_merged = pd.merge(df_employees, df_reporting, how="left", left_on="employee_name", right_on="user_id")
-        df_merged = pd.merge(df_merged, df_family, how="left", left_on="employee_id", right_on="user_id")
+        # Ensure column alignment before merging
+        df_reporting["user_id"] = df_reporting["user_id"].astype(str)
+        # df_family["user_id"] = df_family["user_id"].astype(str)
+        df_employees["employee_id"] = df_employees["employee_id"].astype(str)
+
+        # Merge DataFrames using correct keys
+        df_merged = pd.merge(df_employees, df_reporting, how="left", left_on="employee_id", right_on="user_id")
+        # df_merged = pd.merge(df_merged, df_family, how="left", on="user_id")
+
+        # Drop redundant column
         df_merged.drop(columns=["user_id"], inplace=True)
-
         # Replace NaN values with None
         df_merged.fillna("", inplace=True)
 
