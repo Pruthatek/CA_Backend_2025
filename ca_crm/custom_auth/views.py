@@ -137,6 +137,8 @@ class EmployeeListView(APIView):
                 "employee_id":emp.user.id,
                 "employee_name": emp.user.username,
                 "designation": emp.designation,
+                "username": emp.user.username,
+                "employee_code": emp.user.employee_code,
                 "email": emp.user.email,
                 "phone": emp.user.phone_number,
             }
@@ -199,7 +201,9 @@ class RetrieveEmployeeView(APIView):
                 reporting_user = ReportingUser.objects.get(user=user)
                 reporting_data = {
                     "reporting_to": reporting_user.reporting_to.id if reporting_user.reporting_to else None,
+                    "reporting_to_username": reporting_user.reporting_to.username if reporting_user.reporting_to else None,
                     "working_under": reporting_user.working_under.id if reporting_user.working_under else None,
+                    "working_under_username": reporting_user.working_under.username if reporting_user.working_under else None,
                     "is_active": reporting_user.is_active,
                 } if reporting_user.reporting_to else None
             except ReportingUser.DoesNotExist:
@@ -279,18 +283,24 @@ class UpdateEmployeeView(APIView):
             employee_profile.save()
 
             # Update reporting user only if mappings change
-            if reporting_user:
-                if 'reporting_to' in data:
-                    new_reporting_to = CustomUser.objects.get(id=data['reporting_to']) if data['reporting_to'] else None
+
+            if 'reporting_to' in data or 'working_under' in data:
+                new_reporting_to = CustomUser.objects.get(id=data['reporting_to'], is_active=True) if data['reporting_to'] else None
+                new_working_under = CustomUser.objects.get(id=data['working_under'], is_active=True) if data['working_under'] else None
+                if reporting_user:
                     if reporting_user.reporting_to != new_reporting_to:
                         reporting_user.reporting_to = new_reporting_to
-
-                if 'working_under' in data:
-                    new_working_under = CustomUser.objects.get(id=data['working_under']) if data['working_under'] else None
                     if reporting_user.working_under != new_working_under:
                         reporting_user.working_under = new_working_under
-                reporting_user.is_active = data.get('is_active', reporting_user.is_active)
-                reporting_user.save()
+                    reporting_user.is_active = data.get('is_active', reporting_user.is_active)
+                    reporting_user.save()
+                else:
+                    ReportingUser.objects.create(
+                        user=user,
+                        reporting_to = new_reporting_to,
+                        working_under=new_working_under,
+                        is_active = True
+                    )
 
             # Update family members
             if 'family_members' in data:
