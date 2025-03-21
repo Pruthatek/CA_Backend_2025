@@ -219,11 +219,12 @@ class InwardCreateView(ModifiedApiview):
             # Fetch related objects
             customer = get_object_or_404(Customer, id=customer_id)
             location = get_object_or_404(Location, id=location_id) if location_id else None
+            assigned_task = None
             if task:
                 assigned_task = ClientWorkCategoryAssignment.objects.filter(assignment_id=task, is_active=True).first()
                 if not assigned_task:
                     return Response({"Error":"Selected Task not found"}, status=status.HTTP_400_BAD_REQUEST)
-
+            
             # Handle file upload
             file_url = ""
             if file:
@@ -258,6 +259,7 @@ class InwardCreateView(ModifiedApiview):
                     "inward_for": inward_obj.inward_for,
                     "inward_type": inward_obj.inward_type,
                     "customer": inward_obj.customer.id,
+                    "customer_name": inward_obj.customer.name_of_business,
                     "reference_to": inward_obj.reference_to,
                     "inward_title": inward_obj.inward_title,
                     "task":inward_obj.task.assignment_id if inward_obj.task else None,
@@ -297,6 +299,7 @@ class InwardListView(ModifiedApiview):
                     "inward_for": inward.inward_for,
                     "inward_type": inward.inward_type,
                     "customer": inward.customer.id,
+                    "customer_name": inward.customer.name_of_business,
                     "reference_to": inward.reference_to,
                     "inward_title": inward.inward_title,
                     "description": inward.description,
@@ -370,13 +373,13 @@ class InwardUpdateView(ModifiedApiview):
             inward_obj.description = request.data.get('description', inward_obj.description)
             inward_obj.through = request.data.get('through', inward_obj.through)
             task_id = request.data.get("assignment_id", None)
-
+            assigned_task = None
             if task_id:
                 assigned_task = ClientWorkCategoryAssignment.objects.filter(assignment_id=task_id, is_active=True).first()
                 if not assigned_task:
                     return Response({"Error":"Assigned task not found"}, status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    inward_obj.task = assigned_task
+            else:
+                inward_obj.task = assigned_task
 
 
             # Update related fields if provided
@@ -409,6 +412,7 @@ class InwardUpdateView(ModifiedApiview):
                     "inward_for": inward_obj.inward_for,
                     "inward_type": inward_obj.inward_type,
                     "customer": inward_obj.customer.id,
+                    "customer_name": inward_obj.customer.name_of_business,
                     "reference_to": inward_obj.reference_to,
                     "inward_title": inward_obj.inward_title,
                     "description": inward_obj.description,
@@ -520,6 +524,7 @@ class OutwardCreateView(ModifiedApiview):
                 {
                     "id": outward_obj.id,
                     "customer": outward_obj.customer.id,
+                    "customer_name": outward_obj.customer.name_of_business,
                     "outward_reference": outward_obj.outward_reference,
                     "inward": outward_obj.inward.id if outward_obj.inward else None,
                     "company": outward_obj.company,
@@ -586,6 +591,7 @@ class OutwardRetrieveView(ModifiedApiview):
                 {
                     "id": outward_obj.id,
                     "customer": outward_obj.customer.id,
+                    "customer_name": outward_obj.customer.name_of_business,
                     "outward_reference": outward_obj.outward_reference,
                     "inward": outward_obj.inward.id if outward_obj.inward else None,
                     "company": outward_obj.company,
@@ -665,6 +671,7 @@ class OutwardUpdateView(ModifiedApiview):
                 {
                     "id": outward_obj.id,
                     "customer": outward_obj.customer.id,
+                    "customer_name": outward_obj.customer.name_of_business,
                     "outward_reference": outward_obj.outward_reference,
                     "inward": outward_obj.inward.id if outward_obj.inward else None,
                     "company": outward_obj.company,
