@@ -371,11 +371,12 @@ class InwardUpdateView(ModifiedApiview):
             inward_obj.through = request.data.get('through', inward_obj.through)
             task_id = request.data.get("assignment_id", None)
 
-            assigned_task = ClientWorkCategoryAssignment.objects.filter(assignment_id=task_id, is_active=True).first()
-            if not assigned_task:
-                return Response({"Error":"Assigned task not found"}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                inward_obj.task = assigned_task
+            if task_id:
+                assigned_task = ClientWorkCategoryAssignment.objects.filter(assignment_id=task_id, is_active=True).first()
+                if not assigned_task:
+                    return Response({"Error":"Assigned task not found"}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    inward_obj.task = assigned_task
 
 
             # Update related fields if provided
