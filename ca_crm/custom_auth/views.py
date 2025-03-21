@@ -17,7 +17,7 @@ from datetime import datetime, date
 import os
 import uuid
 import time
-
+import json
 
 def generate_short_unique_filename(extension):
     # Shortened UUID (6 characters) + Unix timestamp for uniqueness
@@ -91,7 +91,11 @@ class CreateEmployeeView(APIView):
 
                     # Create ReportingUser entry
 
-                family_data = data.get('family_details', [])
+                family_data_str = data.get('family_details', [])
+                try:
+                    family_data = json.loads(family_data_str)  # convert string to list[dict]
+                except json.JSONDecodeError:
+                    return Response({'error': 'Invalid JSON in family_details'}, status=status.HTTP_400_BAD_REQUEST)
                 if family_data:
                     for member in family_data:
                         FamilyMemberDetails.objects.create(
@@ -313,7 +317,12 @@ class UpdateEmployeeView(APIView):
 
             # Update family members
             if 'family_details' in data:
-                family_members_data = data['family_details']
+                family_data_str = data['family_details']
+                try:
+                    family_members_data = json.loads(family_data_str)  # convert string to list[dict]
+                except json.JSONDecodeError:
+                    return Response({'error': 'Invalid JSON in family_details'}, status=status.HTTP_400_BAD_REQUEST)
+
                 existing_family_members = FamilyMemberDetails.objects.filter(user=user)
 
                 # Create a set of existing family member IDs
