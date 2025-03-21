@@ -220,8 +220,8 @@ class RetrieveEmployeeView(APIView):
                 family_data = [
                     {
                         "name": member.name,
-                        "relation": member.relationship,
-                        "contact_number": member.contact_no,
+                        "relationship": member.relationship,
+                        "contact_no": member.contact_no,
                         "email": member.email,
                     }
                     for member in family_members
