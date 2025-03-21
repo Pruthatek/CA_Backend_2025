@@ -12,6 +12,7 @@ from django.core.files.storage import FileSystemStorage
 import traceback
 from django.conf import settings
 import pandas as pd
+from django.db import transaction
 from datetime import datetime, date
 import os
 import uuid
@@ -43,65 +44,66 @@ class CreateEmployeeView(APIView):
                 logo_url = ""
 
             # Create the user
-            user = CustomUser.objects.create(
-                username=data['username'],
-                email=data['email'],
-                password=make_password(data['password']),
-                first_name=data.get('first_name', ''),
-                last_name=data.get('last_name', ''),
-                gender=data.get('gender', ''),
-                phone_number=data.get('phone_number', ''),
-                employee_code=data.get('employee_code', ''),
-                address=data.get('address', ''),
-                photo_url=logo_url,
-                role=Role.objects.get(name=data.get('role', 'employee')),  # Assuming 'employee' is a valid role
-            )
+            with transaction.atomic():
+                user = CustomUser.objects.create(
+                    username=data['username'],
+                    email=data['email'],
+                    password=make_password(data['password']),
+                    first_name=data.get('first_name', ''),
+                    last_name=data.get('last_name', ''),
+                    gender=data.get('gender', ''),
+                    phone_number=data.get('phone_number', ''),
+                    employee_code=data.get('employee_code', ''),
+                    address=data.get('address', ''),
+                    photo_url=logo_url,
+                    role=Role.objects.get(name=data.get('role', 'employee')),  # Assuming 'employee' is a valid role
+                )
 
-            # Create EmployeeProfile entry
-            EmployeeProfile.objects.create(
-                user=user,
-                date_of_joining=data.get('date_of_joining'),
-                date_of_leaving=data.get('date_of_leaving', None),
-                referred_by=data.get('referred_by', ''),
-                designation=data.get('designation', ''),
-                is_active=data.get('is_active', True),
-                login_enabled=data.get('login_enabled', True),
-            )
-
-            # Create ReportingUser entry
-            if data.get('reporting_to', None) and data.get('working_under', None):
-                # Check if referenced user exists
-                try:
-                    
-                    reporting_to_user = CustomUser.objects.get(id=data['reporting_to'])
-                    working_under_user = CustomUser.objects.get(id=data['working_under'])
-                    ReportingUser.objects.create(
-                        user=user,
-                        reporting_to=reporting_to_user,
-                        working_under=working_under_user,
-                        is_active=True,
-                    )
-                except CustomUser.DoesNotExist:
-                    return Response(
-                        {'error': 'Reporting to or working under user not found'},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
+                # Create EmployeeProfile entry
+                EmployeeProfile.objects.create(
+                    user=user,
+                    date_of_joining=data.get('date_of_joining'),
+                    date_of_leaving=data.get('date_of_leaving', None),
+                    referred_by=data.get('referred_by', ''),
+                    designation=data.get('designation', ''),
+                    is_active=data.get('is_active', True),
+                    login_enabled=data.get('login_enabled', True),
+                )
 
                 # Create ReportingUser entry
+                if data.get('reporting_to', None) and data.get('working_under', None):
+                    # Check if referenced user exists
+                    try:
+                        
+                        reporting_to_user = CustomUser.objects.get(id=data['reporting_to'])
+                        working_under_user = CustomUser.objects.get(id=data['working_under'])
+                        ReportingUser.objects.create(
+                            user=user,
+                            reporting_to=reporting_to_user,
+                            working_under=working_under_user,
+                            is_active=True,
+                        )
+                    except CustomUser.DoesNotExist:
+                        return Response(
+                            {'error': 'Reporting to or working under user not found'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
 
-            family_data = data.get('family_details', [])
-            if family_data:
-                for member in family_data:
-                    FamilyMemberDetails.objects.create(
-                        user=user,
-                        name=member.get('name'),
-                        relationship=member.get('relation'),
-                        contact_no=member.get('contact_number'),
-                        email=member.get('email'),
-                        is_active=True,
-                    )
+                    # Create ReportingUser entry
 
-            # Generate JWT tokens
+                family_data = data.get('family_details', [])
+                if family_data:
+                    for member in family_data:
+                        FamilyMemberDetails.objects.create(
+                            user=user,
+                            name=member.get('name'),
+                            relationship=member.get('relationship'),
+                            contact_no=member.get('contact_no'),
+                            email=member.get('email'),
+                            is_active=True,
+                        )
+
+                # Generate JWT tokens
             return Response(
                 {
                     'user_id': user.id,
@@ -310,8 +312,8 @@ class UpdateEmployeeView(APIView):
                     )
 
             # Update family members
-            if 'family_members' in data:
-                family_members_data = data['family_members']
+            if 'family_details' in data:
+                family_members_data = data['family_details']
                 existing_family_members = FamilyMemberDetails.objects.filter(user=user)
 
                 # Create a set of existing family member IDs
