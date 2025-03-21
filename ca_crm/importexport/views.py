@@ -378,6 +378,8 @@ class InwardUpdateView(ModifiedApiview):
                 assigned_task = ClientWorkCategoryAssignment.objects.filter(assignment_id=task_id, is_active=True).first()
                 if not assigned_task:
                     return Response({"Error":"Assigned task not found"}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    inward_obj.task = assigned_task
             else:
                 inward_obj.task = assigned_task
 
