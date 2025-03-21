@@ -73,8 +73,7 @@ class CreateEmployeeView(APIView):
                 # Create ReportingUser entry
                 if data.get('reporting_to', None) and data.get('working_under', None):
                     # Check if referenced user exists
-                    try:
-                        
+                    try:                  
                         reporting_to_user = CustomUser.objects.get(id=data['reporting_to'])
                         working_under_user = CustomUser.objects.get(id=data['working_under'])
                         ReportingUser.objects.create(
@@ -91,11 +90,12 @@ class CreateEmployeeView(APIView):
 
                     # Create ReportingUser entry
 
-                family_data_str = data.get('family_details', [])
-                try:
-                    family_data = json.loads(family_data_str)  # convert string to list[dict]
-                except json.JSONDecodeError:
-                    return Response({'error': 'Invalid JSON in family_details'}, status=status.HTTP_400_BAD_REQUEST)
+                family_data = data.get('family_details', [])
+                if isinstance(family_data, str):
+                    try:
+                        family_data = json.loads(family_data)  # convert string to list[dict]
+                    except json.JSONDecodeError:
+                        return Response({'error': 'Invalid JSON in family_details'}, status=status.HTTP_400_BAD_REQUEST)
                 if family_data:
                     for member in family_data:
                         FamilyMemberDetails.objects.create(
@@ -317,11 +317,12 @@ class UpdateEmployeeView(APIView):
 
             # Update family members
             if 'family_details' in data:
-                family_data_str = data['family_details']
-                try:
-                    family_members_data = json.loads(family_data_str)  # convert string to list[dict]
-                except json.JSONDecodeError:
-                    return Response({'error': 'Invalid JSON in family_details'}, status=status.HTTP_400_BAD_REQUEST)
+                family_members_data = data['family_details']
+                if isinstance(family_members_data, str):
+                    try:
+                        family_members_data = json.loads(family_members_data)  # convert string to list[dict]
+                    except json.JSONDecodeError:
+                        return Response({'error': 'Invalid JSON in family_details'}, status=status.HTTP_400_BAD_REQUEST)
 
                 existing_family_members = FamilyMemberDetails.objects.filter(user=user)
 
