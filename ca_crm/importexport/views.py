@@ -207,7 +207,7 @@ class InwardCreateView(ModifiedApiview):
             description = request.data.get('description')
             location_id = request.data.get('location')
             through = request.data.get('through')
-            task = request.data.get('assigned_task', None)
+            task = request.data.get('assignment_id', None)
 
             # Validate required fields
             if not all([company, inward_for, inward_type, customer_id, reference_to, inward_title, description, through]):
@@ -414,8 +414,8 @@ class InwardUpdateView(ModifiedApiview):
                     "description": inward_obj.description,
                     "location": inward_obj.location.id if inward_obj.location else None,
                     "file": inward_obj.file,
-                    "task": inward_obj.task.task_name,
-                    "task_id": inward_obj.task.assignment_id,
+                    "task_name": inward_obj.task.task_name if inward_obj.task else None,
+                    "task": inward_obj.task.assignment_id if inward_obj.task else None,
                     "through": inward_obj.through,
                     "created_by": inward_obj.created_by.id,
                     "modified_by": inward_obj.modified_by.id,
