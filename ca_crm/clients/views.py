@@ -1,11 +1,18 @@
-# api/views.py
+from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
 import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
-from .models import Customer, CustomerContacts, CustomerGroups, CustomerBranch, CustomerBranchMapping, CustomerGroupMapping
+from .models import (Customer, 
+                     CustomerContacts, 
+                     CustomerGroups, 
+                     CustomerBranch, 
+                     CustomerBranchMapping, 
+                     CustomerGroupMapping,
+                     Inquiry
+                     )
 from custom_auth.models import CustomUser  # Update with your user model path
 import pandas as pd
 from django.db import transaction
@@ -751,3 +758,101 @@ class CustomerGroupDeleteView(ModifiedApiview):
             return Response({'message': 'Group deactivated successfully'}, status=status.HTTP_200_OK)
         except CustomerGroups.DoesNotExist:
             return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class InquiryCreateView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        data = request.data
+        required_fields = ["full_name", "mobile_no", "email_id", "selected_services"]
+        
+        for field in required_fields:
+            if field not in data:
+                return Response({"error": f"Missing required field: {field}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Convert list to comma-separated string before saving
+        selected_services_str = ",".join(list(data.get("selected_services", [])))
+
+        inquiry = Inquiry.objects.create(
+            full_name=data["full_name"],
+            mobile_no=data["mobile_no"],
+            email_id=data["email_id"],
+            address=data.get("address", ""),
+            remark=data.get("remark", ""),
+            selected_services=selected_services_str,
+            other_services=data.get("other_services", ""),
+        )
+        
+        return Response({"message": "Inquiry submitted successfully!", "inquiry_id": inquiry.id}, status=status.HTTP_201_CREATED)
+
+
+class InquiryListView(APIView):
+    def get(self, request):
+        try:
+            # Extract and validate pagination parameters
+            page = request.GET.get("page", "1")
+            per_page = request.GET.get("per_page", "10")
+
+            if not page.isdigit() or not per_page.isdigit():
+                return Response({"error": "Page and per_page must be valid integers"}, status=status.HTTP_400_BAD_REQUEST)
+
+            page = int(page)
+            per_page = int(per_page)
+
+            if page < 1 or per_page < 1:
+                return Response({"error": "Page and per_page must be greater than 0"}, status=status.HTTP_400_BAD_REQUEST)
+
+            start_index = (page - 1) * per_page
+
+            # Fetch only required fields with limit & offset for efficiency
+            inquiries = list(
+                Inquiry.objects.filter()
+                .order_by("-created_at")
+                .values("id", "full_name", "mobile_no", "email_id", "selected_services", "created_at")
+                [start_index : start_index + per_page]
+            )
+
+            # Check if there is a next page
+            has_next = Inquiry.objects.filter().order_by("-created_at")[start_index + per_page : start_index + per_page + 1].exists()
+
+            # If no inquiries found
+            if not inquiries:
+                return Response({"message": "No inquiries found", "current_page": page, "per_page": per_page, "has_next": False, "data": []}, status=status.HTTP_200_OK)
+
+            return Response({
+                "current_page": page,
+                "per_page": per_page,
+                "has_next": has_next,
+                "data": inquiries
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": f"Something went wrong: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class InquiryRetrieveView(APIView):
+    def get(self, request, id):
+        try:
+            inquiry = Inquiry.objects.get(id=id)
+            return Response({
+                "full_name": inquiry.full_name,
+                "mobile_no": inquiry.mobile_no,
+                "email_id": inquiry.email_id,
+                "address": inquiry.address,
+                "remark": inquiry.remark,
+                "selected_services": inquiry.get_services_list(),  # Convert back to list
+                "other_services": inquiry.other_services,
+                "created_at": inquiry.created_at,
+            }, status=status.HTTP_200_OK)
+        except Inquiry.DoesNotExist:
+            return Response({"error": "Inquiry not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class InquiryDeleteView(APIView):
+    def delete(self, request, inquiry_id):
+        try:
+            inquiry = Inquiry.objects.get(id=inquiry_id)
+            inquiry.delete()
+            return Response({"message": "Inquiry deleted successfully"}, status=status.HTTP_200_OK)
+        except Inquiry.DoesNotExist:
+            return Response({"error": "Inquiry not found"}, status=status.HTTP_404_NOT_FOUND)

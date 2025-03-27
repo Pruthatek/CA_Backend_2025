@@ -257,3 +257,21 @@ class AssignedWorkOutputFiles(models.Model):
 
     def __str__(self):
         return f"{self.file_name} ({self.assignment.customer.name_of_business})"
+    
+
+class ScheduleTaskTime(models.Model):
+    id = models.AutoField(primary_key=True)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="cutomer_schedule_time")
+    task = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.SET_NULL, 
+                             null=True, blank=True, related_name="task_schedule")
+    assigned_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="assigned_to_schedule")
+    start_time = models.DateTimeField(blank=True, null=True)
+    end_time = models.DateTimeField(blank=True, null=True)
+    mode_of_communication = models.CharField(max_length=100, null=True, blank=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="created_by_schedule")
+    updated_date = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="updated_by_schedule")
+    
+    def __str__(self):
+        return f" Schedule for {self.customer.name_of_business} - {self.task.task_name}"

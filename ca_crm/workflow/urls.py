@@ -49,11 +49,20 @@ from .views import (
     SubmitClientWorkAdditionalFiles,
     SubmitReviewByView,
 
+    SendFilesToClientAPIView,
+    SendActivityReportAPIView,
+
     WorkCategoryUploadDocumentRequiredBulkCreateAPIView,
     WorkCategoryActivityListBulkCreateAPIView,
     WorkCategoryOutputFileBulkCreateAPIView,
 
     ConsolidatedTaskDetailsWithExpensesAndBillingView,
+
+    ScheduleTaskTimeCreateView,
+    ScheduleTaskTimeDetailView,
+    ScheduleTaskTimeUpdateView,
+    ScheduleTaskTimeDeleteView,
+    ScheduleTaskTimeListView
 )
 
 urlpatterns = [
@@ -107,11 +116,20 @@ urlpatterns = [
     path('submit-client-work/additional-activity/<int:assignment_id>/', SubmitClientWorkAdditionalActivity.as_view(), name="submit-client-work-additional-activities"),
 
     path('submit-client-work/review-submission/<int:assignment_id>/', SubmitReviewByView.as_view(), name="submit-client-work-review-submission"),
+    path('send-client-work/output-files/', SendFilesToClientAPIView.as_view(), name="send-client-work-output-files-email"),
+    path('send-client-work/task-status/<int:assignment_id>/', SendActivityReportAPIView.as_view(), name="send-client-work-task-status"),
+    
 
     path('bulk-upload/required-files/', WorkCategoryUploadDocumentRequiredBulkCreateAPIView.as_view(), name="files-required-bulk-create"),
     path('bulk-upload/activity-list/', WorkCategoryActivityListBulkCreateAPIView.as_view(), name="activity-list-bulk-create"),
     path('bulk-upload/output-files/', WorkCategoryOutputFileBulkCreateAPIView.as_view(), name="output-files-bulk-create"),
 
     path('reports/consolidate-task/', ConsolidatedTaskDetailsWithExpensesAndBillingView.as_view(), name="consolidate-task-details"),
+
+    path('schedule/create/', ScheduleTaskTimeCreateView.as_view(), name='schedule_create_view'),
+    path('schedule/get/', ScheduleTaskTimeListView.as_view(), name='schedule_list_view'),
+    path('schedule/retrieve/<int:id>/', ScheduleTaskTimeDetailView.as_view(), name='schedule_retrieve'),
+    path('schedule/update/<int:id>/', ScheduleTaskTimeUpdateView.as_view(), name='schedule_update'),
+    path('schedule/delete/<int:id>/', ScheduleTaskTimeDeleteView.as_view(), name='schedule_deactivate'),
 
 ]

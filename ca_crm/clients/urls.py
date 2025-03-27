@@ -14,7 +14,12 @@ from .views import (CustomerCreateAPIView,
                     CustomerGroupListView,
                     CustomerGroupDetailView,
                     CustomerGroupUpdateView,
-                    CustomerGroupDeleteView)
+                    CustomerGroupDeleteView,
+                    
+                    InquiryCreateView,
+                    InquiryListView,
+                    InquiryRetrieveView,
+                    InquiryDeleteView)
 
 urlpatterns = [
     path('create/', CustomerCreateAPIView.as_view(), name='customer-list'),
@@ -35,4 +40,9 @@ urlpatterns = [
     path('customer-branch/get/<int:branch_id>/', CustomerGroupDetailView.as_view(), name='customer-branch-retrieve'),
     path('customer-branch/update/<int:branch_id>/', CustomerBranchUpdateView.as_view(), name='customer-branch-update'),
     path('customer-branch/delete/<int:branch_id>/', CustomerBranchDeleteView.as_view(), name='customer-branch-delete'),
+
+    path('inquiry/create/', InquiryCreateView.as_view(), name='inquiry-create'),
+    path('inquiry/get-inquiry/', InquiryListView.as_view(), name='inquiry-detail'),
+    path('inquiry/get/<int:id>/', InquiryRetrieveView.as_view(), name='inquiry-retrieve'),
+    path('inquiry/delete/<int:pk>/', InquiryDeleteView.as_view(), name='inquiry-delete'),
 ]

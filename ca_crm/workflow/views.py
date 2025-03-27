@@ -4,6 +4,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from rest_framework import status
 from openpyxl import load_workbook
+from ca_crm.email_service import send_email
 import pandas as pd
 from .models import (
     Department,
@@ -18,6 +19,7 @@ from .models import (
     AssignedWorkActivity,
     AssignedWorkActivityStages,
     AssignedWorkOutputFiles,
+    ScheduleTaskTime,
 )
 from employees.models import TimeTracking 
 from datetime import datetime, time
@@ -36,6 +38,28 @@ from django.db.models import Sum, F, OuterRef, Subquery, Prefetch, Count
 from billing.models import (
     ClientWorkCategoryAssignment, Expense, Billing, BillItems, ExpenseItems, Receipt, ReceiptInvoice
 )
+
+import cloudinary.uploader
+import cloudinary.api
+
+
+def upload_to_cloudinary(file):
+    """Uploads a file to Cloudinary and returns the file URL."""
+    try:
+        result = cloudinary.uploader.upload(file)
+        return result.get("secure_url")  # Returns the public URL of the uploaded file
+    except Exception as e:
+        raise Exception(f"Cloudinary Upload Error: {e}")
+
+
+def get_cloudinary_file(file_url):
+    """Fetches a specific file from Cloudinary."""
+    try:
+        public_id = file_url.split("/")[-1].split(".")[0]  # Extract public ID from URL
+        resource = cloudinary.api.resource(public_id)
+        return resource.get("secure_url")  # Return the file URL
+    except Exception as e:
+        raise Exception(f"Cloudinary Fetch Error: {e}")
 
 
 
@@ -1238,28 +1262,29 @@ class SubmitClientWorkOutputFiles(ModifiedApiview):
             user = self.get_user_from_token(request)
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
             assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
             data = request.data
-            for file_data in data.get("required_files", []):
+            required_files = data.get("required_files", [])
+            if not required_files:
+                return Response({"error": "No files provided"}, status=status.HTTP_400_BAD_REQUEST)
+            for file_data in required_files:
                 assigned_file = AssignedWorkOutputFiles.objects.get(id=file_data.get("id"), is_active=True)
                 attachment_file = file_data.get("file")
+
                 if attachment_file:
-                    ext = os.path.splitext(attachment_file)[1]
-                    short_unique_filename = f"{uuid.uuid4().hex}{ext}"
-                    fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'requiredfiles'))
-                    logo_path = fs.save(short_unique_filename, attachment_file)
-                    attachments_url = posixpath.join('media/invoice_attachments', logo_path)
+                    assigned_file.file_path = upload_to_cloudinary(attachment_file)
                 else:
-                    attachments_url = None
-                assigned_file.file_path = attachments_url
+                    assigned_file.file_path = None
+
                 assigned_file.save()
 
             return Response({"message": "Assignment updated successfully"}, status=status.HTTP_200_OK)
+
         except ClientWorkCategoryAssignment.DoesNotExist:
             return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error":f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
 
 class SubmitClientWorkAdditionalActivity(ModifiedApiview):
     def put(self, request, assignment_id):
@@ -1311,6 +1336,156 @@ class SubmitClientWorkAdditionalFiles(ModifiedApiview):
             return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error":f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SendFilesToClientAPIView(ModifiedApiview):
+    def post(self, request):
+        try:
+            # Extract data from the request
+            email_subject = request.data.get('email_subject')
+            email_body = request.data.get('email_body')
+            to_email = request.data.get('to_email')
+            file_ids = request.data.get('file_ids', [])  # List of file IDs
+
+            # Validate required fields
+            if not all([email_subject, email_body, to_email, file_ids]):
+                return Response(
+                    {"error": "Missing required fields: email_subject, email_body, to_email, file_ids."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            to_email = str(to_email)
+            to_email = to_email.split(",")
+            
+            # Retrieve files
+            files = AssignedWorkOutputFiles.objects.filter(id__in=file_ids, is_active=True)
+
+            if not files.exists():
+                return Response(
+                    {"error": "No valid files found for the given IDs."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get Cloudinary file URLs
+            attachments = []
+            for file in files:
+                if file.file_path:
+                    try:
+                        cloudinary_url = get_cloudinary_file(file.file_path)
+                        attachments.append(cloudinary_url)
+                    except Exception as e:
+                        print(f"Error fetching Cloudinary file: {e}")
+
+            # Send email with attachments
+            email_sent = send_email(
+                subject=email_subject,
+                body=email_body,
+                to_emails=to_email,
+                attachment=attachments
+            )
+
+            if email_sent:
+                return Response({"message": "Email sent successfully."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Failed to send email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SendActivityReportAPIView(ModifiedApiview):
+    def put(self, request, assignment_id):
+        try:
+            # Get user
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            to_email = request.data.get("to_email")
+            to_email = str(to_email)
+            to_email = to_email.split(",")
+            # Fetch assignment
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
+
+            # Get activities
+            completed_activities = AssignedWorkActivity.objects.filter(assignment=assignment, status="completed", is_active=True)
+            incomplete_activities = AssignedWorkActivity.objects.filter(assignment=assignment).exclude(status="completed").filter(is_active=True)
+
+            # Prepare email content
+            email_subject = f"Activity Report - {assignment.task_name} - {assignment.customer.name_of_business}"
+            email_body = f"Activity Report for {assignment.customer.name_of_business}\n\n"
+
+            email_body += "**Completed Activities:**\n"
+            for activity in completed_activities:
+                email_body += f"- {activity.activity} (Completed on: {activity.completion_date})\n"
+
+            email_body += "\n**Incomplete Activities:**\n"
+            for activity in incomplete_activities:
+                email_body += f"- {activity.activity} (Status: {activity.status}, Note: {activity.note})\n"
+
+            # Send email
+            email_sent = send_email(
+                subject=email_subject,
+                body=email_body,
+                to_emails=to_email
+            )
+
+            if email_sent:
+                return Response({"message": "Report sent successfully."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Failed to send email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SendInvoiceAPIView(ModifiedApiview):
+    def put(self, request, assignment_id):
+        try:
+            # Get user
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            to_email = request.data.get("to_email")
+            to_email = str(to_email)
+            to_email = to_email.split(",")
+            # Fetch assignment
+            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
+
+            # Get activities
+            completed_activities = AssignedWorkActivity.objects.filter(assignment=assignment, status="completed", is_active=True)
+            incomplete_activities = AssignedWorkActivity.objects.filter(assignment=assignment).exclude(status="completed").filter(is_active=True)
+
+            # Prepare email content
+            email_subject = f"Activity Report - {assignment.task_name} - {assignment.customer.name_of_business}"
+            email_body = f"Activity Report for {assignment.customer.name_of_business}\n\n"
+
+            email_body += "**Completed Activities:**\n"
+            for activity in completed_activities:
+                email_body += f"- {activity.activity} (Completed on: {activity.completion_date})\n"
+
+            email_body += "\n**Incomplete Activities:**\n"
+            for activity in incomplete_activities:
+                email_body += f"- {activity.activity} (Status: {activity.status}, Note: {activity.note})\n"
+
+            # Send email
+            email_sent = send_email(
+                subject=email_subject,
+                body=email_body,
+                to_emails=to_email
+            )
+
+            if email_sent:
+                return Response({"message": "Report sent successfully."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Failed to send email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AssignTaskView(ModifiedApiview):
@@ -1875,3 +2050,171 @@ class ConsolidatedTaskDetailsWithExpensesAndBillingView(ModifiedApiview):
             return Response(consolidated_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class ScheduleTaskTimeCreateView(ModifiedApiview):
+    def post(self, request):
+        data = request.data
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # Required fields
+            customer_id = data.get("customer_id")
+            task_id = data.get("task_id")
+            start_time = data.get("start_time")
+            end_time = data.get("end_time")
+            
+            if not all([customer_id, task_id, start_time, end_time]):
+                return Response(
+                    {"error": "customer_id, start_time and end_time are required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Fetch related objects
+            customer = Customer.objects.get(id=customer_id)
+            task = None
+            if task_id:
+                task = ClientWorkCategoryAssignment.objects.get(assignment_id=task_id)
+            assigned_to = CustomUser.objects.get(id=data.get("assigned_to_id")) if data.get("assigned_to_id") else None
+
+            with transaction.atomic():
+                schedule = ScheduleTaskTime.objects.create(
+                    customer=customer,
+                    task=task,
+                    assigned_to=assigned_to,
+                    start_time=start_time,
+                    end_time=end_time,
+                    mode_of_communication=data.get("mode_of_communication", ""),
+                    created_by=user,
+                    updated_by=user
+                )
+
+            return Response(
+                {"message": "Schedule created successfully", "id": schedule.id}, 
+                status=status.HTTP_201_CREATED
+            )
+        except Customer.DoesNotExist:
+            return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "Assigned user not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ScheduleTaskTimeListView(ModifiedApiview):
+    def get(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # You can add filters here based on request parameters
+            schedules = ScheduleTaskTime.objects.all().order_by('-created_date')
+            
+            result = []
+            for schedule in schedules:
+                result.append({
+                    "id": schedule.id,
+                    "customer": schedule.customer.name_of_business,
+                    "task": schedule.task.task_name if schedule.task else None,
+                    "assigned_to": schedule.assigned_to.username if schedule.assigned_to else None,
+                    "start_time": schedule.start_time,
+                    "end_time": schedule.end_time,
+                    "mode_of_communication": schedule.mode_of_communication,
+                    "created_date": schedule.created_date,
+                    "created_by": schedule.created_by.username if schedule.created_by else None
+                })
+            
+            return Response({"schedules": result}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ScheduleTaskTimeDetailView(ModifiedApiview):
+    def get(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            schedule = ScheduleTaskTime.objects.get(id=id)
+            
+            response_data = {
+                "id": schedule.id,
+                "customer_id": schedule.customer.id,
+                "customer_name": schedule.customer.name_of_business,
+                "task_id": schedule.task.assignment_id if schedule.task else None,
+                "task_name": schedule.task.task_name if schedule.task else None,
+                "assigned_to_id": schedule.assigned_to.id if schedule.assigned_to else None,
+                "assigned_to_name": schedule.assigned_to.username if schedule.assigned_to else None,
+                "start_time": schedule.start_time,
+                "end_time": schedule.end_time,
+                "mode_of_communication": schedule.mode_of_communication,
+                "created_date": schedule.created_date,
+                "created_by": schedule.created_by.username if schedule.created_by else None,
+                "updated_date": schedule.updated_date,
+                "updated_by": schedule.updated_by.username if schedule.updated_by else None
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+        except ScheduleTaskTime.DoesNotExist:
+            return Response({"error": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ScheduleTaskTimeUpdateView(ModifiedApiview):
+    def put(self, request, id):
+        data = request.data
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            schedule = ScheduleTaskTime.objects.get(id=id)
+            task_details = None
+            if "task_id" in data:
+                task_details = ClientWorkCategoryAssignment.objects.get(assignment_id=data["task_id"])
+            
+            with transaction.atomic():
+                schedule.customer = Customer.objects.get(id=data["customer_id"])
+                schedule.task = task_details
+                schedule.assigned_to = CustomUser.objects.get(id=data["assigned_to_id"]) if data["assigned_to_id"] else None
+                schedule.start_time = data["start_time"]
+                schedule.end_time = data["end_time"]
+                schedule.mode_of_communication = data["mode_of_communication"]
+                schedule.updated_by = user
+                schedule.save()
+            
+            return Response({"message": "Schedule updated successfully"}, status=status.HTTP_200_OK)
+        except ScheduleTaskTime.DoesNotExist:
+            return Response({"error": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Customer.DoesNotExist:
+            return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "Assigned user not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ScheduleTaskTimeDeleteView(ModifiedApiview):
+    def delete(self, request, id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            schedule = ScheduleTaskTime.objects.get(id=id)
+            schedule.delete()
+            
+            return Response({"message": "Schedule deleted successfully"}, status=status.HTTP_200_OK)
+        except ScheduleTaskTime.DoesNotExist:
+            return Response({"error": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

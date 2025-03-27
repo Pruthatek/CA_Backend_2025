@@ -37,11 +37,16 @@ class Billing(models.Model):
     gst = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="GST(18%)")
     include_expense = models.BooleanField(default=False)
     gst_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="GST amount")
+    sgst = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="SGST(9%)", default=0.0)
+    sgst_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="SGST amount", default=0.0)
+    cgst = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="CGST(9%)", default=0.0)
+    cgst_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="CGST_amount", default=0.0)
     total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Total")
     round_off = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Round Off")
     net_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Net Amount")
     paid_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Paid Amount", default=0)
     unpaid_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Unpaid Amount")
+    final_paid_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Paid Amount", default=0)
     payment_status = models.CharField(max_length=50, choices=STATUS_TYPES,  default="unpaid")
     reverse_charges = models.BooleanField(default=False, verbose_name="Reverse Charges")
     is_active = models.BooleanField(default=True)
@@ -154,7 +159,7 @@ class CreditNote(models.Model):
         max_digits=12, decimal_places=2, verbose_name="Total")
     credit_note_amount = models.DecimalField(
         max_digits=12, decimal_places=2, verbose_name="Credit Note Amount")
-
+    
     # Timestamps
     created_date = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="credit_note_created_by")

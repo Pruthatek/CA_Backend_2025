@@ -140,3 +140,23 @@ class CustomerBranchMapping(models.Model):
 
     def __str__(self):
         return f"{self.customer} ({self.branch.name})"
+
+
+class Inquiry(models.Model):
+    id=models.AutoField(primary_key=True)
+    full_name = models.CharField(max_length=255)
+    mobile_no = models.CharField(max_length=15)
+    email_id = models.EmailField()
+    address = models.CharField(max_length=300, blank=True, null=True)
+    remark = models.CharField(max_length=255, blank=True, null=True)
+    # Storing selected services as a comma-separated string
+    selected_services = models.CharField(max_length=255, blank=True, null=True)  
+    other_services = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.full_name
+
+    def get_services_list(self):
+        """Convert stored comma-separated services back into a list"""
+        return self.selected_services.split(",") if self.selected_services else []
