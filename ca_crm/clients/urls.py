@@ -44,5 +44,5 @@ urlpatterns = [
     path('inquiry/create/', InquiryCreateView.as_view(), name='inquiry-create'),
     path('inquiry/get-inquiry/', InquiryListView.as_view(), name='inquiry-detail'),
     path('inquiry/get/<int:id>/', InquiryRetrieveView.as_view(), name='inquiry-retrieve'),
-    path('inquiry/delete/<int:pk>/', InquiryDeleteView.as_view(), name='inquiry-delete'),
+    path('inquiry/delete/<int:id>/', InquiryDeleteView.as_view(), name='inquiry-delete'),
 ]

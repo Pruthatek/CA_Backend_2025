@@ -808,9 +808,13 @@ class InquiryListView(APIView):
             inquiries = list(
                 Inquiry.objects.filter()
                 .order_by("-created_at")
-                .values("id", "full_name", "mobile_no", "email_id", "selected_services", "created_at")
+                .values("id", "full_name", "mobile_no", "email_id", "selected_services", "created_at", "address", "other_services", "remark")
                 [start_index : start_index + per_page]
             )
+
+            for inquiry in inquiries:
+                inquiry["selected_services"] = inquiry["selected_services"].split(",") if inquiry["selected_services"] else []
+                inquiry["other_services"] = inquiry["other_services"].split(",") if inquiry["other_services"] else []
 
             # Check if there is a next page
             has_next = Inquiry.objects.filter().order_by("-created_at")[start_index + per_page : start_index + per_page + 1].exists()
@@ -849,9 +853,9 @@ class InquiryRetrieveView(APIView):
 
 
 class InquiryDeleteView(APIView):
-    def delete(self, request, inquiry_id):
+    def delete(self, request, id):
         try:
-            inquiry = Inquiry.objects.get(id=inquiry_id)
+            inquiry = Inquiry.objects.get(id=id)
             inquiry.delete()
             return Response({"message": "Inquiry deleted successfully"}, status=status.HTTP_200_OK)
         except Inquiry.DoesNotExist:
