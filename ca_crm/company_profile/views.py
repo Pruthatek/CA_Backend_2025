@@ -29,12 +29,8 @@ class CompanyCreateAPI(ModifiedApiview):
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
             # Handle both form-data and json requests
-            if request.content_type == 'application/json':
-                data = request.data
-            else:
-                data = request.POST.dict()
-                if 'logo' in request.FILES:
-                    data['logo'] = request.FILES['logo']
+            
+            data = request.data
             
             # Validate required fields
             required_fields = ['name', 'billing_address', 'pan_no']
@@ -206,7 +202,7 @@ class CompanyUpdateAPI(ModifiedApiview):
             company = Company.objects.get(pk=pk)
             
             # Get data from request
-            data = request.data if request.content_type == 'application/json' else request.POST.dict()
+            data = request.data
             
             # Validate required fields are present
             required_fields = ['name', 'billing_address', 'pan_no']
