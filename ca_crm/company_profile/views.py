@@ -106,7 +106,7 @@ class CompanyListAPI(ModifiedApiview):
                     'name': company.name,
                     'billing_address': company.billing_address,
                     'pan_no': company.pan_no,
-                    'logo_url': company.logo.url if company.logo else None,
+                    'logo_url': company.logo if company.logo else None,
                     'created_at': company.created_at,
                 })
             return Response({'status': 'success', 'data': data}, status=status.HTTP_200_OK)
