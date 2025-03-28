@@ -240,8 +240,12 @@ class CompanyUpdateAPI(ModifiedApiview):
                 logo_path = fs.save(short_unique_filename, logo_url)
                 logo_url = posixpath.join('media/logo_urls', logo_path)
             else:
-                logo_url = ""
-            
+                logo_url = request.FILES.get('logo', None)
+                if logo_url:
+                    logo_url = company.logo
+                else:
+                    logo_url = None
+                
             signature_url = request.FILES.get('updated_signature', None)
             if signature_url:
                 extension = os.path.splitext(signature_url.name)[1]
@@ -250,8 +254,12 @@ class CompanyUpdateAPI(ModifiedApiview):
                 signature_path = fs.save(short_unique_filename, signature_url)
                 signature_url = posixpath.join('media/signature_urls', signature_path)
             else:
-                signature_url = ""
-            
+                signature_url = request.FILES.get('signature', None)
+                if signature_url:
+                    signature_url = company.signature
+                else:
+                    signature_url = None
+                
             qr_code_url = request.FILES.get('updated_qr_code', None)
             if qr_code_url:
                 extension = os.path.splitext(qr_code_url.name)[1]
@@ -260,8 +268,12 @@ class CompanyUpdateAPI(ModifiedApiview):
                 qr_code_path = fs.save(short_unique_filename, qr_code_url)
                 qr_code_url = posixpath.join('media/qr_code_urls', qr_code_path)
             else:
-                qr_code_url = ""
-
+                qr_code_url = request.FILES.get('qr_code', None)
+                if qr_code_url:
+                    qr_code_url = company.qr_code
+                else:
+                    qr_code_url = None
+                
             add_signature_to_invoice = data.get('add_signature_to_invoice', False)
             if isinstance(add_signature_to_invoice, str) and add_signature_to_invoice.lower() == 'true':
                 company.add_signature_to_invoice = True
