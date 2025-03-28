@@ -69,12 +69,40 @@ class CompanyCreateAPI(ModifiedApiview):
                 fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'logo_urls'))
                 logo_path = fs.save(short_unique_filename, logo_url)
                 logo_url = posixpath.join('media/logo_urls', logo_path)
-                company.logo = logo_url
-                company.save()
             else:
                 logo_url = None
-                company.logo = logo_url
-                company.save()
+
+
+            signature_url = request.FILES.get('signature')
+            if signature_url:
+                extension = os.path.splitext(signature_url.name)[1]
+                short_unique_filename = generate_short_unique_filename(extension)
+                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'signature_urls'))
+                signature_path = fs.save(short_unique_filename, signature_url)
+                signature_url = posixpath.join('media/signature_urls', signature_path)
+            else:
+                signature_url = None
+
+            qr_code_url = request.FILES.get('qr_code')
+            if qr_code_url:
+                extension = os.path.splitext(qr_code_url.name)[1]
+                short_unique_filename = generate_short_unique_filename(extension)
+                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'qr_code_urls'))
+                qr_code_path = fs.save(short_unique_filename, qr_code_url)
+                qr_code_url = posixpath.join('media/qr_code_urls', qr_code_path)
+            else:
+                qr_code_url = None
+
+            add_signature_to_invoice = data.get('add_signature_to_invoice', False)
+            if isinstance(add_signature_to_invoice, str) and add_signature_to_invoice.lower() == 'true':
+                company.add_signature_to_invoice = True
+
+            company.add_signature_to_invoice = add_signature_to_invoice
+            company.logo = logo_url
+            company.signature = signature_url
+            company.qr_code = qr_code_url
+            company.save()
+
 
 
             return Response(
@@ -91,6 +119,7 @@ class CompanyCreateAPI(ModifiedApiview):
                 {'status': 'error', 'message': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
 
 class CompanyListAPI(ModifiedApiview):
     def get(self, request):
@@ -147,6 +176,9 @@ class CompanyRetrieveAPI(ModifiedApiview):
                 'cin': company.cin,
                 'terms_and_conditions': company.terms_and_conditions,
                 'logo_url': company.logo if company.logo else None,
+                'signature_url': company.signature if company.signature else None,
+                'qr_code_url': company.qr_code if company.qr_code else None,
+                'add_signature_to_invoice': company.add_signature_to_invoice if company.add_signature_to_invoice else 'false',
                 'bank_details': bank_details_data,
                 'created_at': company.created_at,
                 'updated_at': company.updated_at,
@@ -200,7 +232,7 @@ class CompanyUpdateAPI(ModifiedApiview):
             company.terms_and_conditions = data['terms_and_conditions'].strip() if data.get('terms_and_conditions') else None
             
             # Handle logo update if present
-            logo_url = request.FILES.get('logo', None)
+            logo_url = request.FILES.get('updated_logo', None)
             if logo_url:
                 extension = os.path.splitext(logo_url.name)[1]
                 short_unique_filename = generate_short_unique_filename(extension)
@@ -209,8 +241,35 @@ class CompanyUpdateAPI(ModifiedApiview):
                 logo_url = posixpath.join('media/logo_urls', logo_path)
             else:
                 logo_url = ""
-            company.logo = logo_url
+            
+            signature_url = request.FILES.get('updated_signature', None)
+            if signature_url:
+                extension = os.path.splitext(signature_url.name)[1]
+                short_unique_filename = generate_short_unique_filename(extension)
+                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'signature_urls'))
+                signature_path = fs.save(short_unique_filename, signature_url)
+                signature_url = posixpath.join('media/signature_urls', signature_path)
+            else:
+                signature_url = ""
+            
+            qr_code_url = request.FILES.get('updated_qr_code', None)
+            if qr_code_url:
+                extension = os.path.splitext(qr_code_url.name)[1]
+                short_unique_filename = generate_short_unique_filename(extension)
+                fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'qr_code_urls'))
+                qr_code_path = fs.save(short_unique_filename, qr_code_url)
+                qr_code_url = posixpath.join('media/qr_code_urls', qr_code_path)
+            else:
+                qr_code_url = ""
 
+            add_signature_to_invoice = data.get('add_signature_to_invoice', False)
+            if isinstance(add_signature_to_invoice, str) and add_signature_to_invoice.lower() == 'true':
+                company.add_signature_to_invoice = True
+                
+            company.add_signature_to_invoice = add_signature_to_invoice
+            company.logo = logo_url
+            company.signature = signature_url
+            company.qr_code = qr_code_url
             company.save()
             
             # Prepare response data

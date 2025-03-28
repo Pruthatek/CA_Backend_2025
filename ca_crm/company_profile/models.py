@@ -15,6 +15,9 @@ class Company(models.Model):
     cin = models.CharField(max_length=50, blank=True, null=True)
     terms_and_conditions = models.TextField(blank=True, null=True)
     logo = models.CharField(max_length=255, blank=True, null=True)
+    signature = models.CharField(max_length=255, blank=True, null=True)
+    qr_code = models.CharField(max_length=255, blank=True, null=True)
+    add_signature_to_invoice = models.BooleanField(default=False)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
