@@ -183,6 +183,7 @@ class ClientWorkCategoryAssignment(models.Model):
     progress = models.CharField(max_length=100, choices=progress_choices, default="pending_from_client_side")
     allocated_hours = models.FloatField(blank=True, null=True)
     priority = models.IntegerField(default=1, choices=priority_choices)
+    is_repetitive= models.BooleanField(default=False)
     start_date = models.DateField(blank=True, null=True)
     completion_date = models.DateField(blank=True, null=True)
     assigned_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="work_category_assignments")

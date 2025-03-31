@@ -835,6 +835,12 @@ class ClientWorkCategoryAssignmentCreateView(ModifiedApiview):
             customer_id = data.get("customer_id")
             work_category_id = data.get("work_category_id")
             assigned_to_id = data.get("assigned_to_id", "")
+            is_repetitive = data.get("is_repetitive", False)
+            
+            if isinstance(is_repetitive, str):
+                is_repetitive = is_repetitive.lower() == 'true'
+
+
             if assigned_to_id:
                 assigned_to = CustomUser.objects.get(id=assigned_to_id)
                 assigned_by = CustomUser.objects.get(id=data.get("assigned_by_id"))
@@ -843,8 +849,6 @@ class ClientWorkCategoryAssignmentCreateView(ModifiedApiview):
                 assigned_to = None
                 assigned_by = None
                 review_by = None
-            
-            assigned_by = request.user
 
             if not all([customer_id, work_category_id]):
                 return Response(
@@ -870,6 +874,7 @@ class ClientWorkCategoryAssignmentCreateView(ModifiedApiview):
                     start_date=data.get("start_date"),
                     instructions=data.get("instructions", ""),
                     completion_date=data.get("completion_date"),
+                    is_repetitive=is_repetitive,
                     created_date=datetime.now(),
                     created_by=request.user,
                     updated_by=request.user
@@ -952,6 +957,7 @@ class BulkClientWorkCategoryAssignmentCreateView(ModifiedApiview):
                     assigned_to_id = row.get("assigned_to_id", "")
                     assigned_by_id = row.get("assigned_by_id", "")
                     review_by_id = row.get("review_by_id", "")
+                    is_repetitive = row.get("is_repetitive", False)
 
                     if assigned_to_id:
                         assigned_to = CustomUser.objects.get(id=assigned_to_id)
@@ -962,6 +968,9 @@ class BulkClientWorkCategoryAssignmentCreateView(ModifiedApiview):
                         assigned_by = None
                         review_by = None
 
+                    if isinstance(is_repetitive,str):
+                        is_repetitive = is_repetitive.lower() == 'true'
+                        
                     assigned_by = user
 
                     customer = Customer.objects.get(id=customer_id)
@@ -978,6 +987,7 @@ class BulkClientWorkCategoryAssignmentCreateView(ModifiedApiview):
                         start_date=row.get("start_date"),
                         instructions=row.get("instructions", ""),
                         completion_date=row.get("completion_date"),
+                        is_repetitive=is_repetitive,
                         created_date=datetime.now(),
                         created_by=user,
                         updated_by=user
@@ -1390,6 +1400,36 @@ class SendFilesToClientAPIView(ModifiedApiview):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SendActivityReportPDFAPIView(ModifiedApiview):
+    def post(self, request, assignment_id):
+        try:
+            # Get user
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            attachments = request.FILES.get("invoice_pdf")
+            if not attachments:
+                Response({"message":"Error while fetching file"}, status=status.HTTP_400_BAD_REQUEST)
+            extension = os.path.splitext(attachments.name)[1]
+            if extension != "pdf":
+                Response({"message":"Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
+            email_body = request.get("email_body")
+            email_subject = request.get("email_subject")
+            to_email = request.get("to_email")
+            if isinstance(to_email, str):
+                to_email = to_email.split(",")
+            else:
+                to_email = to_email
+            email = send_email(subject=email_subject,
+                               body=email_body,
+                               to_emails=to_email,
+                               attachment=attachments
+                               )
+
+        except Exception as e:
+            return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SendActivityReportAPIView(ModifiedApiview):
