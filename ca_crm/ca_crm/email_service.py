@@ -34,8 +34,7 @@ def send_email(subject, body, to_emails, attachment=None, html_body=None):
 
         # Attach a file if provided
         if attachment:
-            filename, file_content, mime_type = attachment
-            email.attach(filename, file_content, mime_type)
+            email.attach(attachment.name, attachment.read(), 'application/pdf')
 
         # Send the email
         email.send()
