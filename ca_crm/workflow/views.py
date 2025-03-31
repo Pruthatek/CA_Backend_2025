@@ -1413,7 +1413,7 @@ class SendActivityReportPDFAPIView(ModifiedApiview):
             if not attachments:
                 Response({"message":"Error while fetching file"}, status=status.HTTP_400_BAD_REQUEST)
             extension = os.path.splitext(attachments.name)[1]
-            if extension != "pdf":
+            if extension != ".pdf":
                 Response({"message":"Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
             email_body = request.data.get("email_body")
             email_subject = request.data.get("email_subject")
@@ -1422,7 +1422,6 @@ class SendActivityReportPDFAPIView(ModifiedApiview):
                 to_email = to_email.split(",")
             else:
                 to_email = to_email
-            print(to_email)
             email = send_email(subject=email_subject,
                                body=email_body,
                                to_emails=to_email,
@@ -1484,52 +1483,38 @@ class SendActivityReportAPIView(ModifiedApiview):
             return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SendInvoiceAPIView(ModifiedApiview):
-    def put(self, request, assignment_id):
-        try:
-            # Get user
-            user = self.get_user_from_token(request)
-            if not user:
-                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
-
-            to_email = request.data.get("to_email")
-            to_email = str(to_email)
-            to_email = to_email.split(",")
-            # Fetch assignment
-            assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
-
-            # Get activities
-            completed_activities = AssignedWorkActivity.objects.filter(assignment=assignment, status="completed", is_active=True)
-            incomplete_activities = AssignedWorkActivity.objects.filter(assignment=assignment).exclude(status="completed").filter(is_active=True)
-
-            # Prepare email content
-            email_subject = f"Activity Report - {assignment.task_name} - {assignment.customer.name_of_business}"
-            email_body = f"Activity Report for {assignment.customer.name_of_business}\n\n"
-
-            email_body += "**Completed Activities:**\n"
-            for activity in completed_activities:
-                email_body += f"- {activity.activity} (Completed on: {activity.completion_date})\n"
-
-            email_body += "\n**Incomplete Activities:**\n"
-            for activity in incomplete_activities:
-                email_body += f"- {activity.activity} (Status: {activity.status}, Note: {activity.note})\n"
-
-            # Send email
-            email_sent = send_email(
-                subject=email_subject,
-                body=email_body,
-                to_emails=to_email
-            )
-
-            if email_sent:
-                return Response({"message": "Report sent successfully."}, status=status.HTTP_200_OK)
-            else:
-                return Response({"error": "Failed to send email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except ClientWorkCategoryAssignment.DoesNotExist:
-            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+# class SendInvoiceAPIView(ModifiedApiview):
+#     def put(self, request, assignment_id):
+#         try:
+#             # Get user
+#             user = self.get_user_from_token(request)
+#             if not user:
+#                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+#             attachments = request.FILES.get("invoice_pdf")
+#             if not attachments:
+#                 Response({"message":"Error while fetching file"}, status=status.HTTP_400_BAD_REQUEST)
+#             extension = os.path.splitext(attachments.name)[1]
+#             if extension != "pdf":
+#                 Response({"message":"Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
+#             email_body = request.data.get("email_body")
+#             email_subject = request.data.get("email_subject")
+#             to_email = request.data.get("to_email")
+#             if isinstance(to_email, str):
+#                 to_email = to_email.split(",")
+#             else:
+#                 to_email = to_email
+#             print(to_email)
+#             email = send_email(subject=email_subject,
+#                                body=email_body,
+#                                to_emails=to_email,
+#                                attachment=attachments
+#                                )
+#             if email:
+#                 return Response({"message":"Invoice Email sent successfully"}, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({"message":"Error while sending email"}, status=status.HTTP_400_BAD_REQUEST)
+#         except Exception as e:
+#             return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AssignTaskView(ModifiedApiview):
