@@ -21,6 +21,7 @@ from .models import (Billing,
                      DebitNoteItem,
                      ReceiptInvoice)
 from workflow.views import ModifiedApiview
+from ca_crm.email_service import send_email
 
 
 class BillingCreateView(ModifiedApiview):
@@ -52,6 +53,10 @@ class BillingCreateView(ModifiedApiview):
             discount_amount = request.data.get('discount_amount')
             gst = request.data.get('gst')
             gst_amount = request.data.get('gst_amount')
+            sgst = request.data.get('sgst',0)
+            sgst_amount = request.data.get('sgst_amount',0)
+            cgst = request.data.get('cgst',0)
+            cgst_amount = request.data.get('cgst_amount',0)
             total = request.data.get('total')
             round_off = request.data.get('round_off')
             net_amount = request.data.get('net_amount')
@@ -100,6 +105,10 @@ class BillingCreateView(ModifiedApiview):
                     discount_amount=discount_amount,
                     gst=gst,
                     gst_amount=gst_amount,
+                    sgst=sgst,
+                    sgst_amount=sgst_amount,
+                    cgst=cgst,
+                    cgst_amount=cgst_amount,
                     total=total,
                     round_off=round_off,
                     net_amount=net_amount,
@@ -195,6 +204,10 @@ class BillingRetrieveView(ModifiedApiview):
                 "discount_amount": billing_obj.discount_amount,
                 "gst": billing_obj.gst,
                 "gst_amount": billing_obj.gst_amount,
+                "sgst": billing_obj.sgst,
+                "sgst_amount": billing_obj.sgst_amount,
+                "cgst": billing_obj.cgst,
+                "cgst_amount": billing_obj.cgst_amount,
                 "total": billing_obj.total,
                 "round_off": billing_obj.round_off,
                 "net_amount": billing_obj.net_amount,
@@ -244,6 +257,10 @@ class BillingUpdateView(ModifiedApiview):
             discount_amount = request.data.get('discount_amount', billing_obj.discount_amount)
             gst = request.data.get('gst', billing_obj.gst)
             gst_amount = request.data.get('gst_amount', billing_obj.gst_amount)
+            sgst = request.data.get('sgst', billing_obj.sgst)
+            sgst_amount = request.data.get('sgst_amount', billing_obj.sgst_amount)
+            cgst = request.data.get('cgst', billing_obj.cgst)
+            cgst_amount = request.data.get('cgst_amount', billing_obj.cgst_amount)
             total = request.data.get('total', billing_obj.total)
             round_off = request.data.get('round_off', billing_obj.round_off)
             net_amount = request.data.get('net_amount', billing_obj.net_amount)
@@ -279,6 +296,10 @@ class BillingUpdateView(ModifiedApiview):
                 billing_obj.discount_amount = discount_amount
                 billing_obj.gst = gst
                 billing_obj.gst_amount = gst_amount
+                billing_obj.sgst = sgst
+                billing_obj.sgst_amount = sgst_amount
+                billing_obj.cgst = cgst
+                billing_obj.cgst_amount = cgst_amount
                 billing_obj.total = total
                 billing_obj.round_off = round_off
                 billing_obj.net_amount = net_amount
@@ -622,6 +643,40 @@ class ReceiptRetrieveAPIView(ModifiedApiview):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )     
+
+
+class SendInvoiceAPIView(ModifiedApiview):
+    def put(self, request):
+        try:
+            # Get user
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            attachments = request.FILES.get("invoice_pdf")
+            if not attachments:
+                Response({"message":"Error while fetching file"}, status=status.HTTP_400_BAD_REQUEST)
+            extension = os.path.splitext(attachments.name)[1]
+            if extension != "pdf":
+                Response({"message":"Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
+            email_body = request.data.get("email_body")
+            email_subject = request.data.get("email_subject")
+            to_email = request.data.get("to_email")
+            if isinstance(to_email, str):
+                to_email = to_email.split(",")
+            else:
+                to_email = to_email
+            print(to_email)
+            email = send_email(subject=email_subject,
+                               body=email_body,
+                               to_emails=to_email,
+                               attachment=attachments
+                               )
+            if email:
+                return Response({"message":"Invoice Email sent successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message":"Error while sending email"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ReceiptDeleteAPIView(ModifiedApiview):

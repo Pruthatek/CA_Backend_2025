@@ -19,7 +19,9 @@ from .views import (
     DebitNoteListView,
     DebitNoteUpdateView,
     DebitNoteRetrieveView,
-    DebitNoteDeleteView
+    DebitNoteDeleteView,
+
+    SendInvoiceAPIView
 )
 
 urlpatterns = [
@@ -29,6 +31,8 @@ urlpatterns = [
     path('billing/update/<int:bill_id>/', BillingUpdateView.as_view(), name='billing-update'),
     path('billing/delete/<int:bill_id>/', BillingDeleteView.as_view(), name='billing-delete'),
 
+    path('billing/send-invoice/', SendInvoiceAPIView.as_view(), name='send-invoice-view'),
+    
     path('receipt/create/', ReceiptCreateAPIView.as_view(), name='receipt-create'),
     path('receipt/', ReceiptListAPIView.as_view(), name='receipt-list'),
     path('receipt/retrieve/<int:id>/', ReceiptRetrieveAPIView.as_view(), name='receipt-retrieve'),
