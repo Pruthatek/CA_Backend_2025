@@ -1409,25 +1409,29 @@ class SendActivityReportPDFAPIView(ModifiedApiview):
             user = self.get_user_from_token(request)
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
-            attachments = request.FILES.get("invoice_pdf")
+            attachments = request.FILES.get("task_update")
             if not attachments:
                 Response({"message":"Error while fetching file"}, status=status.HTTP_400_BAD_REQUEST)
             extension = os.path.splitext(attachments.name)[1]
             if extension != "pdf":
                 Response({"message":"Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
-            email_body = request.get("email_body")
-            email_subject = request.get("email_subject")
-            to_email = request.get("to_email")
+            email_body = request.data.get("email_body")
+            email_subject = request.data.get("email_subject")
+            to_email = request.data.get("to_email")
             if isinstance(to_email, str):
                 to_email = to_email.split(",")
             else:
                 to_email = to_email
+            print(to_email)
             email = send_email(subject=email_subject,
                                body=email_body,
                                to_emails=to_email,
                                attachment=attachments
                                )
-
+            if email:
+                return Response({"message":"Email sent successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message":"Error while sending email"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -54,6 +54,7 @@ from .views import (
 
     WorkCategoryUploadDocumentRequiredBulkCreateAPIView,
     WorkCategoryActivityListBulkCreateAPIView,
+    SendActivityReportPDFAPIView,
     WorkCategoryOutputFileBulkCreateAPIView,
 
     ConsolidatedTaskDetailsWithExpensesAndBillingView,
@@ -117,7 +118,7 @@ urlpatterns = [
 
     path('submit-client-work/review-submission/<int:assignment_id>/', SubmitReviewByView.as_view(), name="submit-client-work-review-submission"),
     path('send-client-work/output-files/', SendFilesToClientAPIView.as_view(), name="send-client-work-output-files-email"),
-    path('send-client-work/task-status/<int:assignment_id>/', SendActivityReportAPIView.as_view(), name="send-client-work-task-status"),
+    path('send-client-work/task-status/<int:assignment_id>/', SendActivityReportPDFAPIView.as_view(), name="send-client-work-task-status"),
     
 
     path('bulk-upload/required-files/', WorkCategoryUploadDocumentRequiredBulkCreateAPIView.as_view(), name="files-required-bulk-create"),
