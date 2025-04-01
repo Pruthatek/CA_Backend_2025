@@ -1121,6 +1121,7 @@ class ClientWorkCategoryAssignmentRetrieveView(ModifiedApiview):
                 "id": assignment.assignment_id,
                 "task_name": assignment.task_name,
                 "customer": assignment.customer.name_of_business,
+                "customer_id": assignment.customer.id,
                 "work_category": assignment.work_category.name,
                 "work_category_id":assignment.work_category.id,
                 "department_name": assignment.work_category.department.name,
