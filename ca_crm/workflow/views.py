@@ -1661,6 +1661,7 @@ class RetrieveAssignedTaskView(ModifiedApiview):
                 data = {
                     "id": assignment.id,
                     "customer": assignment.customer.name_of_business,
+                    "customer_id": assignment.customer.id,
                     "work_category": assignment.work_category.name,
                     "assigned_to": assignment.assigned_to.username if assignment.assigned_to else None,
                     "assigned_by": assignment.assigned_by.username if assignment.assigned_by else None,
