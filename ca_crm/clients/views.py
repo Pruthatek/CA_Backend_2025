@@ -781,6 +781,15 @@ class InquiryCreateView(APIView):
             remark=data.get("remark", ""),
             selected_services=selected_services_str,
             other_services=data.get("other_services", ""),
+            reference_full_name=data.get("reference_full_name", None),
+            reference_mobile_no=data.get("reference_mobile_no", None),
+            reference_email_id=data.get("reference_email_id", None),
+            call_full_name=data.get("call_full_name", None),
+            call_mobile_no=data.get("call_mobile_no", None),
+            call_email_id=data.get("call_email_id", None),
+            otp_full_name=data.get("otp_full_name", None),
+            otp_mobile_no=data.get("otp_mobile_no", None),
+            otp_email_id=data.get("otp_email_id", None),
         )
         
         return Response({"message": "Inquiry submitted successfully!", "inquiry_id": inquiry.id}, status=status.HTTP_201_CREATED)
@@ -808,7 +817,7 @@ class InquiryListView(APIView):
             inquiries = list(
                 Inquiry.objects.filter()
                 .order_by("-created_at")
-                .values("id", "full_name", "mobile_no", "email_id", "selected_services", "created_at", "address", "other_services", "remark")
+                .values("id", "full_name", "mobile_no", "email_id", "selected_services", "created_at", "address", "other_services", "remark", "reference_full_name")
                 [start_index : start_index + per_page]
             )
 
@@ -846,6 +855,15 @@ class InquiryRetrieveView(APIView):
                 "remark": inquiry.remark,
                 "selected_services": inquiry.get_services_list(),  # Convert back to list
                 "other_services": inquiry.other_services,
+                "reference_full_name": inquiry.reference_full_name,
+                "reference_mobile_no": inquiry.reference_mobile_no,
+                "reference_email_id": inquiry.reference_email_id,
+                "call_full_name": inquiry.call_full_name,
+                "call_mobile_no": inquiry.call_mobile_no,
+                "call_email_id": inquiry.call_email_id,
+                "otp_full_name": inquiry.otp_full_name,
+                "otp_mobile_no": inquiry.otp_mobile_no,
+                "otp_email_id": inquiry.otp_email_id,
                 "created_at": inquiry.created_at,
             }, status=status.HTTP_200_OK)
         except Inquiry.DoesNotExist:
