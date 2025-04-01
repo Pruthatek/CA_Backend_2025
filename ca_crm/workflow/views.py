@@ -1159,7 +1159,7 @@ class ClientWorkCategoryAssignmentUpdateView(ModifiedApiview):
             data = request.data
             assigned_to = CustomUser.objects.get(id=data.get("assigned_to",""))
             if assigned_to:
-                assigned_by = request.user
+                assigned_by = CustomUser.objects.get(id=data.get("assigned_by", ""))
                 review_by = CustomUser.objects.get(id=data.get("review_by", ""))
             else:
                 assigned_to = assignment.assigned_to
