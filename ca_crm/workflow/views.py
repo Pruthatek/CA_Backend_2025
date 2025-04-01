@@ -1157,10 +1157,10 @@ class ClientWorkCategoryAssignmentUpdateView(ModifiedApiview):
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
             assignment = ClientWorkCategoryAssignment.objects.get(assignment_id=assignment_id, is_active=True)
             data = request.data
-            assigned_to = CustomUser.objects.get(id=data.get("assigned_to",""))
+            assigned_to = CustomUser.objects.get(id=data.get("assigned_to_id",""))
             if assigned_to:
-                assigned_by = CustomUser.objects.get(id=data.get("assigned_by", ""))
-                review_by = CustomUser.objects.get(id=data.get("review_by", ""))
+                assigned_by = CustomUser.objects.get(id=data.get("assigned_by_id", ""))
+                review_by = CustomUser.objects.get(id=data.get("review_by_id", ""))
             else:
                 assigned_to = assignment.assigned_to
                 assigned_by = assignment.assigned_by
