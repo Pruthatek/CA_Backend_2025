@@ -1296,6 +1296,7 @@ class SubmitClientWorkOutputFiles(ModifiedApiview):
         except Exception as e:
             return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
 
+
 class SubmitClientWorkAdditionalActivity(ModifiedApiview):
     def put(self, request, assignment_id):
         try:
@@ -1999,7 +2000,6 @@ class WorkCategoryOutputFileBulkCreateAPIView(ModifiedApiview):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-
 class ConsolidatedTaskDetailsWithExpensesAndBillingView(ModifiedApiview):
     def get(self, request):
         try:
@@ -2094,6 +2094,8 @@ class ScheduleTaskTimeCreateView(ModifiedApiview):
             task_id = data.get("task_id")
             start_time = data.get("start_time")
             end_time = data.get("end_time")
+            activities = data.get("activities",None)
+            instructions = data.get("activities",None)
             
             if not all([customer_id, task_id, start_time, end_time]):
                 return Response(
@@ -2115,6 +2117,8 @@ class ScheduleTaskTimeCreateView(ModifiedApiview):
                     assigned_to=assigned_to,
                     start_time=start_time,
                     end_time=end_time,
+                    activities=activities,
+                    instructions=instructions,
                     mode_of_communication=data.get("mode_of_communication", ""),
                     created_by=user,
                     updated_by=user
@@ -2181,6 +2185,8 @@ class ScheduleTaskTimeDetailView(ModifiedApiview):
                 "assigned_to_id": schedule.assigned_to.id if schedule.assigned_to else None,
                 "assigned_to_name": schedule.assigned_to.username if schedule.assigned_to else None,
                 "start_time": schedule.start_time,
+                "activities": schedule.activities,
+                "instructions": schedule.instructions,
                 "end_time": schedule.end_time,
                 "mode_of_communication": schedule.mode_of_communication,
                 "created_date": schedule.created_date,
@@ -2216,6 +2222,8 @@ class ScheduleTaskTimeUpdateView(ModifiedApiview):
                 schedule.start_time = data["start_time"]
                 schedule.end_time = data["end_time"]
                 schedule.mode_of_communication = data["mode_of_communication"]
+                schedule.activities = data.get("activities", schedule.activities)
+                schedule.instructions = data.get("instructions", schedule.instructions)
                 schedule.updated_by = user
                 schedule.save()
             

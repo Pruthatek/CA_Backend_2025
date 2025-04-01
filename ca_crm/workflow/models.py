@@ -265,6 +265,8 @@ class ScheduleTaskTime(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="cutomer_schedule_time")
     task = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.SET_NULL, 
                              null=True, blank=True, related_name="task_schedule")
+    activities = models.CharField(max_length=100, null=True, blank=True)
+    instructions = models.CharField(max_length=255, null=True, blank=True)
     assigned_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="assigned_to_schedule")
     start_time = models.DateTimeField(blank=True, null=True)
     end_time = models.DateTimeField(blank=True, null=True)
