@@ -20,6 +20,7 @@ from .models import (
     AssignedWorkActivityStages,
     AssignedWorkOutputFiles,
     ScheduleTaskTime,
+    ClientWorkReminder,
 )
 from employees.models import TimeTracking 
 from datetime import datetime, time
@@ -2257,3 +2258,183 @@ class ScheduleTaskTimeDeleteView(ModifiedApiview):
             return Response({"error": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class ClientWorkReminderCreateView(ModifiedApiview):
+    def post(self, request):
+        data = request.data
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # Required fields
+            client_id = data.get("client_id")
+            
+            if not client_id:
+                return Response(
+                    {"error": "client_id is required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Fetch related objects
+            client = Customer.objects.get(id=client_id)
+            task = None
+            if data.get("task_id"):
+                task = ClientWorkCategoryAssignment.objects.get(assignment_id=data.get("task_id"))
+
+            with transaction.atomic():
+                reminder = ClientWorkReminder.objects.create(
+                    client=client,
+                    task=task,
+                    reminder_note=data.get("reminder_note", ""),
+                    status=data.get("status", ""),
+                    created_by=user,
+                    updated_by=user
+                )
+
+            return Response(
+                {"message": "Reminder created successfully", "id": reminder.id}, 
+                status=status.HTTP_201_CREATED
+            )
+        except Customer.DoesNotExist:
+            return Response({"error": "Client not found"}, status=status.HTTP_404_NOT_FOUND)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    
+class ClientWorkReminderRetrieveView(ModifiedApiview):
+    def get(self, request, reminder_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            reminder = ClientWorkReminder.objects.get(id=reminder_id)
+            data = {
+                "id": reminder.id,
+                "client_id": reminder.client.id,
+                "task_id": reminder.task.assignment_id if reminder.task else None,
+                "reminder_note": reminder.reminder_note,
+                "status": reminder.status,
+                "created_date": reminder.created_date,
+                "created_by": reminder.created_by.id,
+                "updated_date": reminder.updated_date,
+                "updated_by": reminder.updated_by.id
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        except ClientWorkReminder.DoesNotExist:
+            return Response({"error": "Reminder not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class ClientWorkReminderUpdateView(ModifiedApiview):
+    def put(self, request, reminder_id):
+        data = request.data
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            reminder = ClientWorkReminder.objects.get(id=reminder_id)
+            
+            with transaction.atomic():
+                if data.get("client_id"):
+                    reminder.client = Customer.objects.get(id=data.get("client_id"))
+                if data.get("task_id"):
+                    reminder.task = ClientWorkCategoryAssignment.objects.get(assignment_id=data.get("task_id"))
+                if "reminder_note" in data:
+                    reminder.reminder_note = data.get("reminder_note")
+                if "status" in data:
+                    reminder.status = data.get("status")
+                
+                reminder.updated_by = user
+                reminder.save()
+
+            return Response(
+                {"message": "Reminder updated successfully"}, 
+                status=status.HTTP_200_OK
+            )
+        except ClientWorkReminder.DoesNotExist:
+            return Response({"error": "Reminder not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Customer.DoesNotExist:
+            return Response({"error": "Client not found"}, status=status.HTTP_404_NOT_FOUND)
+        except ClientWorkCategoryAssignment.DoesNotExist:
+            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class ClientWorkReminderListView(ModifiedApiview):
+    def get(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            reminders = ClientWorkReminder.objects.all()
+            data = [{
+                "id": reminder.id,
+                "client_id": reminder.client.id,
+                "task_id": reminder.task.assignment_id if reminder.task else None,
+                "reminder_note": reminder.reminder_note,
+                "status": reminder.status,
+                "created_date": reminder.created_date,
+                "created_by": reminder.created_by.id,
+                "updated_date": reminder.updated_date,
+                "updated_by": reminder.updated_by.id
+            } for reminder in reminders]
+            
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class ClientWorkReminderActivityView(ModifiedApiview):
+    def get(self, request, assignment_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            reminders = ClientWorkReminder.objects.filter(task__assignment_id=assignment_id).exclude(status="close").all()
+            data = [{
+                "id": reminder.id,
+                "client_id": reminder.client.id,
+                "task_id": reminder.task.assignment_id if reminder.task else None,
+                "reminder_note": reminder.reminder_note,
+                "status": reminder.status,
+                "created_date": reminder.created_date,
+                "created_by": reminder.created_by.id,
+                "updated_date": reminder.updated_date,
+                "updated_by": reminder.updated_by.id
+            } for reminder in reminders]
+            
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ClientWorkReminderDeleteView(ModifiedApiview):
+    def delete(self, request, reminder_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            reminder = ClientWorkReminder.objects.get(id=reminder_id)
+            reminder.delete()
+            
+            return Response(
+                {"message": "Reminder deleted successfully"}, 
+                status=status.HTTP_200_OK
+            )
+        except ClientWorkReminder.DoesNotExist:
+            return Response({"error": "Reminder not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+

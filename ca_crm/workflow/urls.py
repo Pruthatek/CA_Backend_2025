@@ -63,7 +63,14 @@ from .views import (
     ScheduleTaskTimeDetailView,
     ScheduleTaskTimeUpdateView,
     ScheduleTaskTimeDeleteView,
-    ScheduleTaskTimeListView
+    ScheduleTaskTimeListView,
+
+    ClientWorkReminderCreateView,
+    ClientWorkReminderListView,
+    ClientWorkReminderActivityView,
+    ClientWorkReminderRetrieveView,
+    ClientWorkReminderUpdateView,
+    ClientWorkReminderDeleteView,
 )
 
 urlpatterns = [
@@ -132,5 +139,13 @@ urlpatterns = [
     path('schedule/retrieve/<int:id>/', ScheduleTaskTimeDetailView.as_view(), name='schedule_retrieve'),
     path('schedule/update/<int:id>/', ScheduleTaskTimeUpdateView.as_view(), name='schedule_update'),
     path('schedule/delete/<int:id>/', ScheduleTaskTimeDeleteView.as_view(), name='schedule_deactivate'),
+
+
+    path('reminder/create/', ClientWorkReminderCreateView.as_view(), name='reminder_create_view'),
+    path('reminder/get/', ClientWorkReminderListView.as_view(), name='reminder_list_view'),
+    path('reminder/get/<int:assignment_id>/', ClientWorkReminderActivityView.as_view(), name='reminder_list_activity_view'),
+    path('reminder/retrieve/<int:reminder_id>/', ClientWorkReminderRetrieveView.as_view(), name='reminder_retrieve'),
+    path('reminder/update/<int:reminder_id>/', ClientWorkReminderUpdateView.as_view(), name='reminder_update'),
+    path('reminder/delete/<int:reminder_id>/', ClientWorkReminderDeleteView.as_view(), name='reminder_deactivate'),
 
 ]

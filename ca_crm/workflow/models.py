@@ -278,3 +278,17 @@ class ScheduleTaskTime(models.Model):
     
     def __str__(self):
         return f" Schedule for {self.customer.name_of_business} - {self.task.task_name}"
+
+
+class ClientWorkReminder(models.Model):
+    status_choices = [("close","Close"), ("open","Open")]
+    id = models.AutoField(primary_key=True)
+    client = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="client_work_reminder")
+    task = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.SET_NULL, 
+                             null=True, blank=True, related_name="task_work_reminder")
+    reminder_note = models.CharField(max_length=400, null=True, blank=True)
+    status = models.CharField(max_length=15, choices=status_choices, default="open", null=True, blank=True)
+    created_date = models.DateField(auto_now_add=True)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="created_by_work_reminder")
+    updated_date = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="updated_by_work_reminder")
