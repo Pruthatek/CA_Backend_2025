@@ -2316,7 +2316,9 @@ class ClientWorkReminderRetrieveView(ModifiedApiview):
             data = {
                 "id": reminder.id,
                 "client_id": reminder.client.id,
+                "client_name": reminder.client.name_of_business if reminder.client else None,
                 "task_id": reminder.task.assignment_id if reminder.task else None,
+                "task_name": reminder.task.task_name if reminder.task else None,
                 "reminder_note": reminder.reminder_note,
                 "status": reminder.status,
                 "created_date": reminder.created_date,
@@ -2379,7 +2381,9 @@ class ClientWorkReminderListView(ModifiedApiview):
             data = [{
                 "id": reminder.id,
                 "client_id": reminder.client.id,
+                "client_name": reminder.client.name_of_business if reminder.client else None,
                 "task_id": reminder.task.assignment_id if reminder.task else None,
+                "task_name": reminder.task.task_name if reminder.task else None,
                 "reminder_note": reminder.reminder_note,
                 "status": reminder.status,
                 "created_date": reminder.created_date,
@@ -2403,8 +2407,10 @@ class ClientWorkReminderActivityView(ModifiedApiview):
             reminders = ClientWorkReminder.objects.filter(task__assignment_id=assignment_id).exclude(status="close").all()
             data = [{
                 "id": reminder.id,
-                "client_id": reminder.client.id,
+                "client_id": reminder.client.id if reminder.client else None,
+                "client_name": reminder.client.name_of_business if reminder.client else None,
                 "task_id": reminder.task.assignment_id if reminder.task else None,
+                "task_name": reminder.task.task_name if reminder.task else None,
                 "reminder_note": reminder.reminder_note,
                 "status": reminder.status,
                 "created_date": reminder.created_date,
