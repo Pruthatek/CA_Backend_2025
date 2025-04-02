@@ -786,10 +786,10 @@ class InquiryCreateView(APIView):
             reference_email_id=data.get("reference_email_id", None),
             call_full_name=data.get("call_full_name", None),
             call_mobile_no=data.get("call_mobile_no", None),
-            call_email_id=data.get("call_email_id", None),
+            call_relation=data.get("call_relation", None),
             otp_full_name=data.get("otp_full_name", None),
             otp_mobile_no=data.get("otp_mobile_no", None),
-            otp_email_id=data.get("otp_email_id", None),
+            otp_relation=data.get("otp_relation", None),
         )
         
         return Response({"message": "Inquiry submitted successfully!", "inquiry_id": inquiry.id}, status=status.HTTP_201_CREATED)
@@ -860,10 +860,10 @@ class InquiryRetrieveView(APIView):
                 "reference_email_id": inquiry.reference_email_id,
                 "call_full_name": inquiry.call_full_name,
                 "call_mobile_no": inquiry.call_mobile_no,
-                "call_email_id": inquiry.call_email_id,
+                "call_relation": inquiry.call_relation,
                 "otp_full_name": inquiry.otp_full_name,
                 "otp_mobile_no": inquiry.otp_mobile_no,
-                "otp_email_id": inquiry.otp_email_id,
+                "otp_relation": inquiry.otp_relation,
                 "created_at": inquiry.created_at,
             }, status=status.HTTP_200_OK)
         except Inquiry.DoesNotExist:
