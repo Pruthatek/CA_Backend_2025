@@ -370,6 +370,53 @@ class UpdateEmployeeView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class DeleteEmployeeView(APIView):
+    permission_classes = [IsAuthenticated]  # Adjust permissions as needed
+
+    def delete(self, request, user_id):
+        try:
+            with transaction.atomic():
+                # Get the user
+                user = CustomUser.objects.get(id=user_id)
+                
+                # Soft delete the user
+                user.is_active = False
+                user.save()
+                
+                # Deactivate EmployeeProfile
+                EmployeeProfile.objects.filter(user=user).update(
+                    is_active=False,
+                    login_enabled=False
+                )
+                
+                # Remove reporting relationships
+                ReportingUser.objects.filter(user=user).delete()
+                
+                # Remove family details
+                FamilyMemberDetails.objects.filter(user=user).delete()
+                
+                return Response(
+                    {
+                        'message': 'Employee deactivated and related data removed',
+                        'user_id': user.id,
+                        'username': user.username,
+                        'is_active': user.is_active
+                    },
+                    status=status.HTTP_200_OK
+                )
+                
+        except CustomUser.DoesNotExist:
+            return Response(
+                {'error': 'Employee not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
