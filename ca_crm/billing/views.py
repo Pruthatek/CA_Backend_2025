@@ -22,6 +22,8 @@ from .models import (Billing,
                      ReceiptInvoice)
 from workflow.views import ModifiedApiview
 from ca_crm.email_service import send_email
+from django.db.models.functions import Coalesce
+from django.db.models import Value
 
 
 class BillingCreateView(ModifiedApiview):
@@ -179,9 +181,13 @@ class BillingRetrieveView(ModifiedApiview):
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
             billing_obj = get_object_or_404(Billing, id=bill_id)
-            bill_items = BillItems.objects.filter(bill=billing_obj).values("id", 'task_name', 'hsn_code', 'amount')
-            expense_items = ExpenseItems.objects.filter(bill=billing_obj).values("id", "expense__id", 'expense_description', 'expense_type', 'hsn_code', 'amount')
+            bill_items = BillItems.objects.filter(bill=billing_obj).annotate(
+                assignment_id=Coalesce("work_category__assignment_id", Value(None))
+            ).values("id", "assignment_id", 'task_name', 'hsn_code', 'amount')
 
+            expense_items = ExpenseItems.objects.filter(bill=billing_obj).annotate(
+                expense__id=Coalesce("expense__id", Value(None))
+            ).values("id", "expense__id", 'expense_description', 'expense_type', 'hsn_code', 'amount')
             billing_details = {
                 "id": billing_obj.id,
                 "bill_type": billing_obj.bill_type,
