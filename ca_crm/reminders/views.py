@@ -91,6 +91,7 @@ class ReminderRetrieveView(ModifiedApiview):
             data = {
                 "id": reminder.id,
                 "customer_id": reminder.customer.id,
+                "customer_name": reminder.customer.name_of_business,
                 "billing_id": reminder.billing.id if reminder.billing else None,
                 "type_of_reminder": reminder.type_of_reminder,
                 "reminder_title": reminder.reminder_title,
@@ -98,8 +99,10 @@ class ReminderRetrieveView(ModifiedApiview):
                 "reminder_date": reminder.reminder_date,
                 "to_email": reminder.to_email,
                 "created_by": reminder.created_by.id,
+                "created_by_user": reminder.created_by.username,
                 "created_date": reminder.created_date,
                 "updated_by": reminder.updated_by.id if reminder.updated_by else None,
+                "updated_by_user": reminder.updated_by.username if reminder.updated_by else None,
                 "updated_date": reminder.updated_date
             }
             return Response(data, status=status.HTTP_200_OK)
@@ -140,6 +143,7 @@ class ReminderListView(ModifiedApiview):
             data = [{
                 "id": reminder.id,
                 "customer_id": reminder.customer.id,
+                "customer_name": reminder.customer.name_of_business,
                 "billing_id": reminder.billing.id if reminder.billing else None,
                 "type_of_reminder": reminder.type_of_reminder,
                 "reminder_title": reminder.reminder_title,
@@ -147,8 +151,10 @@ class ReminderListView(ModifiedApiview):
                 "to_email": reminder.to_email,
                 "reminder_date": reminder.reminder_date,
                 "created_by": reminder.created_by.id,
+                "created_by_user": reminder.created_by.username,
                 "created_date": reminder.created_date,
                 "updated_by": reminder.updated_by.id if reminder.updated_by else None,
+                "updated_by_user": reminder.updated_by.username if reminder.updated_by else None,
                 "updated_date": reminder.updated_date
             } for reminder in reminders]
             
