@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'expense',
     'billing',
     'company_profile',
+    "reminders",
 ]
 
 MIDDLEWARE = [

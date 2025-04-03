@@ -29,6 +29,7 @@ urlpatterns = [
     path('expense/', include('expense.urls')),
     path('billing/', include('billing.urls')),
     path('manage/', include('company_profile.urls')),
+    path('reminder/', include('reminders.urls')),
     
 ]
 
