@@ -180,7 +180,7 @@ class BillingRetrieveView(ModifiedApiview):
 
             billing_obj = get_object_or_404(Billing, id=bill_id)
             bill_items = BillItems.objects.filter(bill=billing_obj).values("id", 'task_name', 'hsn_code', 'amount')
-            expense_items = ExpenseItems.objects.filter(bill=billing_obj).values("id", 'expense_description', 'expense_type', 'hsn_code', 'amount')
+            expense_items = ExpenseItems.objects.filter(bill=billing_obj).values("id", "expense__id", 'expense_description', 'expense_type', 'hsn_code', 'amount')
 
             billing_details = {
                 "id": billing_obj.id,
