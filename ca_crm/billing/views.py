@@ -179,8 +179,8 @@ class BillingRetrieveView(ModifiedApiview):
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
             billing_obj = get_object_or_404(Billing, id=bill_id)
-            bill_items = BillItems.objects.filter(bill=billing_obj).values('task_name', 'hsn_code', 'amount')
-            expense_items = ExpenseItems.objects.filter(bill=billing_obj).values('expense_description', 'expense_type', 'hsn_code', 'amount')
+            bill_items = BillItems.objects.filter(bill=billing_obj).values("id", 'task_name', 'hsn_code', 'amount')
+            expense_items = ExpenseItems.objects.filter(bill=billing_obj).values("id", 'expense_description', 'expense_type', 'hsn_code', 'amount')
 
             billing_details = {
                 "id": billing_obj.id,
@@ -189,6 +189,7 @@ class BillingRetrieveView(ModifiedApiview):
                 "bank": billing_obj.bank,
                 "financial_year": billing_obj.financial_year,
                 "customer": billing_obj.customer.name_of_business,
+                "customer_id": billing_obj.customer.id,
                 "type_of_supply": billing_obj.type_of_supply,
                 "place_of_supply": billing_obj.place_of_supply,
                 "billing_description": billing_obj.billing_description,
