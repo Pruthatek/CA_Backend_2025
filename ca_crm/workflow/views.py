@@ -1176,6 +1176,8 @@ class ClientWorkCategoryAssignmentUpdateView(ModifiedApiview):
             assignment.progress = data.get("progress", assignment.progress)
             assignment.priority = data.get("priority", assignment.priority)
             assignment.instructions = data.get("instructions", assignment.instructions)
+            assignment.allocated_hours = data.get("allocated_hours", assignment.allocated_hours)
+            assignment.is_repetitive = data.get("is_repetitive", assignment.is_repetitive),
             assignment.start_date = data.get("start_date", assignment.start_date)
             assignment.completion_date = data.get("completion_date", assignment.completion_date)
             assignment.updated_by = request.user
