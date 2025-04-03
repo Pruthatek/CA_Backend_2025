@@ -1134,6 +1134,7 @@ class ClientWorkCategoryAssignmentRetrieveView(ModifiedApiview):
                 "priority": assignment.priority,
                 "priority_display": assignment.get_priority_display(),
                 "instructions": assignment.instructions,
+                "is_repetitive": assignment.is_repetitive,
                 "allocated_hours": assignment.allocated_hours,
                 "assigned_to": assignment.assigned_to.username if assignment.assigned_to else "",
                 "assigned_to_id": assignment.assigned_to.id if assignment.assigned_to else "",
@@ -1177,7 +1178,7 @@ class ClientWorkCategoryAssignmentUpdateView(ModifiedApiview):
             assignment.priority = data.get("priority", assignment.priority)
             assignment.instructions = data.get("instructions", assignment.instructions)
             assignment.allocated_hours = data.get("allocated_hours", assignment.allocated_hours)
-            assignment.is_repetitive = data.get("is_repetitive", assignment.is_repetitive),
+            assignment.is_repetitive = data.get("is_repetitive", assignment.is_repetitive)
             assignment.start_date = data.get("start_date", assignment.start_date)
             assignment.completion_date = data.get("completion_date", assignment.completion_date)
             assignment.updated_by = request.user
