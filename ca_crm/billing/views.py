@@ -135,15 +135,16 @@ class BillingCreateView(ModifiedApiview):
                     )
 
                 # Create ExpenseItems for the billing
-                for expense in expense_items:
-                    ExpenseItems.objects.create(
-                        bill=billing_obj,
-                        expense_description=expense.get('expense_description'),
-                        expense_type=expense.get('expense_type'),
-                        expense=get_object_or_404(Expense, id=expense.get('expense_id')) if expense.get('expense_id',None) else None,
-                        hsn_code=expense.get('hsn_code'),
-                        amount=expense.get('amount')
-                    )
+                if expense_items:
+                    for expense in expense_items:
+                        ExpenseItems.objects.create(
+                            bill=billing_obj,
+                            expense_description=expense.get('expense_description'),
+                            expense_type=expense.get('expense_type'),
+                            expense=get_object_or_404(Expense, id=expense.get('expense_id')) if expense.get('expense_id',None) else None,
+                            hsn_code=expense.get('hsn_code'),
+                            amount=expense.get('amount')
+                        )
             return Response({"message":"bill_created_successfully", "bill_id":billing_obj.id}, status=status.HTTP_201_CREATED)
 
         except Exception as e:
