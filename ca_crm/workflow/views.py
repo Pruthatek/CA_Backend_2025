@@ -252,6 +252,7 @@ class WorkCategoryCreateAPIView(ModifiedApiview):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+
 class WorkCategoryGetAPIView(ModifiedApiview):
     def get(self, request, id=None):
         try:
@@ -341,6 +342,7 @@ class WorkCategoryUpdateAPIView(ModifiedApiview):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
 
 class GetDepartmentWorkCategoriesAPIView(ModifiedApiview):
     def get(self, request, id):

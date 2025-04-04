@@ -654,7 +654,7 @@ class ReceiptRetrieveAPIView(ModifiedApiview):
 
 
 class SendInvoiceAPIView(ModifiedApiview):
-    def put(self, request):
+    def post(self, request):
         try:
             # Get user
             user = self.get_user_from_token(request)
