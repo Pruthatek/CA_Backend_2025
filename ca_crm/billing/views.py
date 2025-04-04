@@ -222,6 +222,7 @@ class BillingRetrieveView(ModifiedApiview):
                 "reverse_charges": billing_obj.reverse_charges,
                 "paid_amount": billing_obj.paid_amount,
                 "unpaid_amount": billing_obj.unpaid_amount,
+                "final_paid_amount": billing_obj.final_paid_amount,
                 "payment_status": billing_obj.payment_status,
                 "bill_items": list(bill_items),
                 "expense_items": list(expense_items)
