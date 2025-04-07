@@ -15,7 +15,7 @@ class Customer(models.Model):
         ("society", "Society"),
         ("individual", "Individual"),
     ]
-    DCS_CHOICES = [("new_dcs", "New DCS"), 
+    DSC_CHOICES = [("new_dcs", "New DSC"), 
                    ("received", "Received"), 
                    ("not_received", "Not Received"),
                    ("na", "NA")]
@@ -57,7 +57,7 @@ class Customer(models.Model):
     enable_account = models.BooleanField(default=True)
     accountant_name = models.CharField(max_length=100, blank=True, null=True)
     accountant_phone = models.CharField(max_length=100, blank=True, null=True)
-    dsc = models.CharField(choices=DCS_CHOICES, default="na", max_length=50, null=True, blank=True)
+    dsc = models.CharField(choices=DSC_CHOICES, default="na", max_length=50, null=True, blank=True)
 
     # Metadata
     created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="customer_created_by")

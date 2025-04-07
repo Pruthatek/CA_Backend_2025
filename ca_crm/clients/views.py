@@ -65,8 +65,8 @@ class CustomerCreateAPIView(ModifiedApiview):
                                           "bank", "aop_or_boi", "huf", "ajp", "society", "individual"]:
                 return Response({"error": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
 
-            if data.get("dcs") not in ["new_dcs", "received", "not_received", "na"]:
-                return Response({"error": "Invalid DCS status."}, status=status.HTTP_400_BAD_REQUEST)
+            if data.get("dsc") not in ["new_dsc", "received", "not_received", "na"]:
+                return Response({"error": "Invalid DSC status."}, status=status.HTTP_400_BAD_REQUEST)
             
             if data.get("status") == "private_limited" and not data.get("cin_number"):
                 return Response(
@@ -99,6 +99,7 @@ class CustomerCreateAPIView(ModifiedApiview):
                 llipin_number=data.get("llipin_number"),
                 din_number=data.get("din_number"),
                 date_of_birth=data.get("date_of_birth"),
+                dsc=data.get("dsc", None),
                 pan_no=data.get("pan_no"),
                 enable_account=data.get("enable_account", True),
                 accountant_name=data.get("accountant_name"),
@@ -250,7 +251,7 @@ class CustomerRetrieveAPIView(ModifiedApiview):
                 "additional_contact_number": customer.additional_contact_number,
                 "secondary_email_id": customer.secondary_email_id,
                 "destination_address": customer.destination_address,
-                "dcs": customer.dsc,
+                "dsc": customer.dsc,
                 "gst_no": customer.gst_no,
                 "gst_state_code": customer.gst_state_code,
                 "cin_number": customer.cin_number,
@@ -317,11 +318,11 @@ class CustomerUpdateAPIView(ModifiedApiview):
                     )
                 customer.status = data['status']
 
-            # Validate DCS status
-            if 'dcs' in data:
-                if data['dcs'] not in ["new_dcs", "received", "not_received", "na"]:
-                    return Response({"error": "Invalid DCS status."}, status=status.HTTP_400_BAD_REQUEST)
-                customer.dcs = data['dcs']
+            # Validate DSC status
+            if 'dsc' in data:
+                if data['dsc'] not in ["new_dsc", "received", "not_received", "na"]:
+                    return Response({"error": "Invalid DSC status."}, status=status.HTTP_400_BAD_REQUEST)
+                customer.dsc = data['dsc']
 
             # Update other fields
             customer.name_of_business = data.get('name_of_business', customer.name_of_business)
@@ -344,7 +345,7 @@ class CustomerUpdateAPIView(ModifiedApiview):
             customer.cin_number = data.get('cin_number', customer.cin_number)
             customer.llipin_number = data.get('llipin_number', customer.llipin_number)
             customer.din_number = data.get('din_number', customer.din_number)
-            customer.dsc = data.get('dcs', customer.dsc)
+            customer.dsc = data.get('dsc', customer.dsc)
             customer.date_of_birth = data.get('date_of_birth', customer.date_of_birth)
             customer.pan_no = data.get('pan_no', customer.pan_no)
             customer.enable_account = data.get('enable_account', customer.enable_account)
@@ -513,11 +514,11 @@ class CustomerBulkCreateExcelAPIView(ModifiedApiview):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate DCS status if column exists
-        if "dcs" in df.columns:
-            if not df["dcs"].isin(["new_dcs", "received", "not_received", "na"]).all():
+        # Validate DSC status if column exists
+        if "dsc" in df.columns:
+            if not df["dsc"].isin(["new_dsc", "received", "not_received", "na"]).all():
                 return Response(
-                    {"error": "One or more rows have an invalid DCS status."},
+                    {"error": "One or more rows have an invalid DSC status."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
