@@ -259,7 +259,7 @@ class BillingUpdateView(ModifiedApiview):
             billing_description = request.data.get('billing_description', billing_obj.billing_description)
             fees = request.data.get('fees', billing_obj.fees)
             invoice_date = request.data.get('invoice_date', billing_obj.invoice_date)
-            # invoice_date = request.data.get('invoice_date', billing_obj.invoice_date)
+            due_date = request.data.get('due_date', billing_obj.due_date)
             proforma_invoice = request.data.get('proforma_invoice', billing_obj.proforma_invoice)
             requested_by = request.data.get('requested_by', billing_obj.requested_by)
             narration = request.data.get('narration', billing_obj.narration)
