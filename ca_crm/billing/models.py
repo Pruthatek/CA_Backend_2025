@@ -26,6 +26,7 @@ class Billing(models.Model):
     billing_description = models.TextField(verbose_name="Billing Description")
     fees = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Fees")
     invoice_date = models.DateField(verbose_name="Invoice Date")
+    due_date = models.DateField(verbose_name="Due Date", blank=True, null=True)
     proforma_invoice = models.BooleanField(default=False, verbose_name="Proforma Invoice")
     requested_by = models.CharField(max_length=255, verbose_name="Requested By")
     hrs_spent = models.FloatField(default=0.00, null=True, blank=True)
@@ -74,13 +75,13 @@ class BillItems(models.Model):
     bill = models.ForeignKey(Billing, on_delete=models.CASCADE, related_name='bill_items')
     task_name = models.CharField(max_length=255, verbose_name="task_name", null=True)
     work_category = models.ForeignKey(ClientWorkCategoryAssignment, on_delete=models.SET_NULL, null=True, blank=True, related_name="bill_task")
-    hsn_code = models.CharField(max_length=255, verbose_name="task_name", null=True)
+    hsn_code = models.CharField(max_length=255, verbose_name="hsn_code", null=True)
+    narration = models.CharField(max_length=255, verbose_name="narration", null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Item Amount")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.task_name}"
-
 
 
 class ExpenseItems(models.Model):

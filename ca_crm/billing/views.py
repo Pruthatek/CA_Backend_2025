@@ -44,6 +44,7 @@ class BillingCreateView(ModifiedApiview):
             billing_description = request.data.get('billing_description')
             fees = request.data.get('fees')
             invoice_date = request.data.get('invoice_date')
+            due_date = request.data.get('due_date')
             proforma_invoice = request.data.get('proforma_invoice', False)
             requested_by = request.data.get('requested_by')
             narration = request.data.get('narration')
@@ -96,6 +97,7 @@ class BillingCreateView(ModifiedApiview):
                     billing_description=billing_description,
                     fees=fees,
                     invoice_date=invoice_date,
+                    due_date=due_date,
                     proforma_invoice=proforma_invoice,
                     hrs_spent=hrs_spent,
                     task=task,
@@ -133,7 +135,8 @@ class BillingCreateView(ModifiedApiview):
                         task_name=item.get('task_name'),
                         work_category=work_category if bill_type == 'structured' else None,
                         hsn_code=item.get('hsn_code'),
-                        amount=item.get('amount')
+                        amount=item.get('amount'),
+                        narration=item.get('narration')
                     )
 
                 # Create ExpenseItems for the billing
@@ -164,7 +167,7 @@ class BillingListView(ModifiedApiview):
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
             bills = Billing.objects.all().values(
-                'id', 'bill_type', 'billing_company', 'customer__name_of_business', 'invoice_date', 'total', 'payment_status'
+                'id', 'bill_type', 'billing_company', 'customer__name_of_business', 'invoice_date', "due_date", 'total', 'payment_status'
             )
 
             return Response(bills, status=status.HTTP_200_OK)
@@ -183,7 +186,7 @@ class BillingRetrieveView(ModifiedApiview):
             billing_obj = get_object_or_404(Billing, id=bill_id)
             bill_items = BillItems.objects.filter(bill=billing_obj).annotate(
                 assignment_id=Coalesce("work_category__assignment_id", Value(None))
-            ).values("id", "assignment_id", 'task_name', 'hsn_code', 'amount')
+            ).values("id", "assignment_id", 'task_name', 'hsn_code', 'amount', "narration")
 
             expense_items = ExpenseItems.objects.filter(bill=billing_obj).annotate(
                 expense__id=Coalesce("expense__id", Value(None))
@@ -201,6 +204,7 @@ class BillingRetrieveView(ModifiedApiview):
                 "billing_description": billing_obj.billing_description,
                 "fees": billing_obj.fees,
                 "invoice_date": billing_obj.invoice_date,
+                "due_date": billing_obj.due_date,
                 "proforma_invoice": billing_obj.proforma_invoice,
                 "requested_by": billing_obj.requested_by,
                 "narration": billing_obj.narration,
@@ -255,6 +259,7 @@ class BillingUpdateView(ModifiedApiview):
             billing_description = request.data.get('billing_description', billing_obj.billing_description)
             fees = request.data.get('fees', billing_obj.fees)
             invoice_date = request.data.get('invoice_date', billing_obj.invoice_date)
+            # invoice_date = request.data.get('invoice_date', billing_obj.invoice_date)
             proforma_invoice = request.data.get('proforma_invoice', billing_obj.proforma_invoice)
             requested_by = request.data.get('requested_by', billing_obj.requested_by)
             narration = request.data.get('narration', billing_obj.narration)
@@ -390,7 +395,6 @@ class BillingUpdateView(ModifiedApiview):
             )                
 
 
-
 class BillingDeleteView(ModifiedApiview):
     def delete(self, request, bill_id):
         try:
@@ -470,6 +474,7 @@ class ReceiptCreateAPIView(ModifiedApiview):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )                
+
 
 class ReceiptUpdateAPIView(ModifiedApiview):
     def put(self, request, id, *args, **kwargs):
@@ -600,6 +605,7 @@ class ReceiptListAPIView(ModifiedApiview):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )     
+
 
 class ReceiptRetrieveAPIView(ModifiedApiview):
     def get(self, request, id, *args, **kwargs):
