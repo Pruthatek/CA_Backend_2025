@@ -299,6 +299,7 @@ class BillingUpdateView(ModifiedApiview):
                 billing_obj.billing_description = billing_description
                 billing_obj.fees = fees
                 billing_obj.invoice_date = invoice_date
+                billing_obj.due_date = due_date
                 billing_obj.proforma_invoice = proforma_invoice
                 billing_obj.requested_by = requested_by
                 billing_obj.narration = narration
@@ -338,6 +339,7 @@ class BillingUpdateView(ModifiedApiview):
                         bill_item.work_category = work_category if bill_type == 'structured' else None
                         bill_item.hsn_code = item_data.get('hsn_code', bill_item.hsn_code)
                         bill_item.amount = item_data.get('amount', bill_item.amount)
+                        bill_item.narration = item_data.get('narration', bill_item.narration)
                         bill_item.save()
                     else:
                         # Create new BillItem
@@ -346,6 +348,7 @@ class BillingUpdateView(ModifiedApiview):
                             task_name=item_data.get('task_name'),
                             work_category=work_category if bill_type == 'structured' else None,
                             hsn_code=item_data.get('hsn_code'),
+                            narration=item_data.get('narration'),
                             amount=item_data.get('amount')
                         )
 
