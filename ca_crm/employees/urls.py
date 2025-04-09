@@ -19,7 +19,7 @@ from .views import (
 
     ApplyLeaveAPIView,
     LeaveApprovalAPIView,
-
+    UserLeaveBalanceAPIView,
 
     RetrieveHolidayAPIView,
     BulkTimeTrackingCreateView,
@@ -36,6 +36,7 @@ urlpatterns = [
     path('Request-attendance/', RequestAttendanceAPIView.as_view(), name="Request Attendance"),
     path("apply-leave/", ApplyLeaveAPIView.as_view(), name="apply-leave"),
     path("approve-leave/", LeaveApprovalAPIView.as_view(), name="approve-leave"),
+    path("get-leaves/", UserLeaveBalanceAPIView.as_view(), name="leave-get"),
     path("attendance-view/", GetAttendanceAPIView.as_view(), name="Attendance-view"),
     path("approve-attendance/", ApproveAttendanceAPIView.as_view(), name="Attendance-approve"),
     

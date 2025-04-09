@@ -1,42 +1,43 @@
+import os
+import django
 from datetime import date
-from django.core.management.base import BaseCommand
-from employees.models import EmployeeAttendance, EmployeeProfile, Holiday
 from django.db import transaction
 
-class Command(BaseCommand):
-    help = "Marks employees as absent if they missed clock-in or clock-out"
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ca_crm.settings')  # change this
+django.setup()
 
-    def handle(self, *args, **kwargs):
-        today = date.today()
+from employees.models import EmployeeAttendance, EmployeeProfile, Holiday, CustomUser
 
-        # Skip if it's a weekend
-        if today.weekday() in [5, 6]:  # 5=Saturday, 6=Sunday
-            self.stdout.write("Skipping script for weekends.")
-            return
+def mark_absent():
+    today = date.today()
 
-        # Skip if it's a holiday
-        if Holiday.objects.filter(date=today).exists():
-            self.stdout.write("Skipping script for holiday.")
-            return
+    if today.weekday() in [5, 6]:
+        print("Skipping script for weekends.")
+        return
 
-        employees = EmployeeProfile.objects.all()
+    if Holiday.objects.filter(date=today).exists():
+        print("Skipping script for holiday.")
+        return
 
-        with transaction.atomic():
-            for employee in employees:
-                attendance = EmployeeAttendance.objects.filter(employee=employee, date=today).first()
+    employees = CustomUser.objects.all()
 
-                if not attendance:
-                    # No clock-in, mark absent
-                    EmployeeAttendance.objects.create(
-                        employee=employee,
-                        date=today,
-                        status="absent",
-                        remarks="Did not check-in"
-                    )
-                elif attendance.check_in and not attendance.check_out:
-                    # Forgot to clock out, mark absent
-                    attendance.status = "absent"
-                    attendance.remarks = "Did not check-out"
-                    attendance.save()
+    with transaction.atomic():
+        for employee in employees:
+            attendance = EmployeeAttendance.objects.filter(employee=employee, date=today).first()
 
-        self.stdout.write("Attendance update complete.")
+            if not attendance:
+                EmployeeAttendance.objects.create(
+                    employee=employee,
+                    date=today,
+                    status="absent",
+                    remarks="Did not check-in"
+                )
+            elif attendance.check_in and not attendance.check_out:
+                attendance.status = "absent"
+                attendance.remarks = "Did not check-out"
+                attendance.save()
+
+    print("Attendance update complete.")
+
+if __name__ == "__main__":
+    mark_absent()
