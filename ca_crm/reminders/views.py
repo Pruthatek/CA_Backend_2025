@@ -19,6 +19,10 @@ class ReminderCreateView(ModifiedApiview):
             
             # Required fields
             customer_id = data.get("customer_id")
+            attachments = request.FILES.get("attachment",None)
+            include_invoice = data.get("include_invoice")
+            if isinstance(include_invoice, str):
+                include_invoice = include_invoice.lower() == 'true'
             
             if not customer_id:
                 return Response(
@@ -48,7 +52,11 @@ class ReminderCreateView(ModifiedApiview):
             
 
             with transaction.atomic():
-                email = send_email(subject=reminder_title, body=content, to_emails=to_email)
+                if include_invoice:
+                    email = send_email(subject=reminder_title, body=content, to_emails=to_email, attachment=attachments)
+                else:
+                    email = send_email(subject=reminder_title, body=content, to_emails=to_email)
+
 
                 if not email:
                     return Response(
