@@ -1,5 +1,5 @@
 from django.db import models
-from custom_auth.models import CustomUser, EmployeeProfile
+from custom_auth.models import CustomUser, EmployeeProfile, ReportingUser
 from datetime import datetime, timedelta
 from clients.models import Customer
 from workflow.models import ClientWorkCategoryAssignment, AssignedWorkActivity

@@ -10,6 +10,7 @@ import traceback
 from datetime import date, datetime, timedelta
 from .models import (EmployeeAttendance, 
                      CustomUser, 
+                     ReportingUser,
                      Holiday, 
                      TimeTracking, 
                      Customer, 
@@ -572,12 +573,52 @@ class ApplyLeaveAPIView(ModifiedApiview):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class GetLeaveApplications(ModifiedApiview):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response(
+                    {"error": "Permission denied"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            leave_apps = LeaveApplication.objects.filter(status='pending').order_by(
+                '-start_date')
+            data = [
+                {
+                    "id": app.id,
+                    "employee": app.employee.username,
+                    "employee_id": app.employee.id,
+                    "leave_type": app.leave_type.name,
+                    "start_date": app.start_date.strftime("%Y-%m-%d"),
+                    "end_date": app.end_date.strftime("%Y-%m-%d"),
+                    "days": app.days,
+                    "status": app.status,
+                    "approved_by": app.approved_by.username if app.approved_by else None,
+                    "approved_on": app.approved_on.strftime("%Y-%m-%d") if app.approved_on else None,
+                    "rejection_reason": app.rejection_reason,
+                    "created_at": app.created_at.strftime("%Y-%m-%d")
+                }
+                for app in leave_apps
+            ] 
+            return Response({"data": data}, status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+
+
 class LeaveApprovalAPIView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, leave_id):
         try:
             approver = self.get_user_from_token(request)
+            if not approver:
+                return Response(
+                    {"error": "Permission denied"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             action = request.data.get("action")  # 'approve' or 'reject'
             rejection_reason = request.data.get("rejection_reason", "")
 
@@ -591,6 +632,13 @@ class LeaveApprovalAPIView(ModifiedApiview):
                     {"error": "Leave application is already processed"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            
+            reporting = ReportingUser.objects.filter(user=leave_app.employee).first()
+            if approver.id != reporting.reporting_to.id:
+                return Response(
+                    {"error": "You are not authorized to approve this leave application"}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )   
 
             with transaction.atomic():
                 if action == 'approve':
