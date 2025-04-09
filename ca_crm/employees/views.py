@@ -14,6 +14,9 @@ from .models import (EmployeeAttendance,
                      TimeTracking, 
                      Customer, 
                      ClientWorkCategoryAssignment, 
+                     LeaveType,
+                     LeaveApplication,
+                     UserLeaveMapping,
                      AssignedWorkActivity)
 from django.utils import timezone
 from workflow.views import ModifiedApiview
@@ -145,39 +148,494 @@ class RequestAttendanceAPIView(ModifiedApiview):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class LeaveTypeAPIView(ModifiedApiview):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            leave_types = LeaveType.objects.filter(is_active=True)
+            data = [{
+                'id': lt.id,
+                'name': lt.name,
+                'description': lt.description,
+                'max_days': lt.max_days
+            } for lt in leave_types]
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserLeaveBalanceAPIView(ModifiedApiview):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            current_year = date.today().year
+            mappings = UserLeaveMapping.objects.filter(user=user, year=current_year)
+            
+            data = [{
+                'leave_type_id': m.leave_type.id,
+                'leave_type_name': m.leave_type.name,
+                'total_days': m.total_days,
+                'remaining_days': m.remaining_days
+            } for m in mappings]
+            
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class LeaveTypeListAPIView(ModifiedApiview):
+    """List all leave types"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            leave_types = LeaveType.objects.all()
+            data = []
+            for lt in leave_types:
+                data.append({
+                    'id': lt.id,
+                    'name': lt.name,
+                    'description': lt.description,
+                    'max_days': lt.max_days,
+                    'is_active': lt.is_active,
+                    'created_at': lt.created_at,
+                    'updated_at': lt.updated_at
+                })
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class LeaveTypeCreateAPIView(ModifiedApiview):
+    """Create new leave type"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+            name = request.data.get('name')
+            description = request.data.get('description', '')
+            max_days = request.data.get('max_days', 0)
+
+            if not name:
+                return Response({'error': 'Name is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            with transaction.atomic():
+                leave_type = LeaveType.objects.create(
+                    name=name,
+                    description=description,
+                    max_days=max_days
+                )
+
+            return Response({
+                'message': 'Leave type created successfully',
+                'id': leave_type.id
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class LeaveTypeRetrieveAPIView(ModifiedApiview):
+    """Retrieve single leave type"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, leave_type_id):
+        try:
+            leave_type = LeaveType.objects.get(id=leave_type_id)
+            data = {
+                'id': leave_type.id,
+                'name': leave_type.name,
+                'description': leave_type.description,
+                'max_days': leave_type.max_days,
+                'is_active': leave_type.is_active,
+                'created_at': leave_type.created_at,
+                'updated_at': leave_type.updated_at
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        except LeaveType.DoesNotExist:
+            return Response({'error': 'Leave type not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class LeaveTypeUpdateAPIView(ModifiedApiview):
+    """Update leave type"""
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, leave_type_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user.is_superuser:
+                return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+            leave_type = LeaveType.objects.get(id=leave_type_id)
+            
+            name = request.data.get('name')
+            description = request.data.get('description')
+            max_days = request.data.get('max_days')
+            is_active = request.data.get('is_active')
+
+            if name:
+                leave_type.name = name
+            if description is not None:
+                leave_type.description = description
+            if max_days is not None:
+                leave_type.max_days = max_days
+            if is_active is not None:
+                leave_type.is_active = is_active
+
+            leave_type.save()
+
+            return Response({
+                'message': 'Leave type updated successfully',
+                'id': leave_type.id
+            }, status=status.HTTP_200_OK)
+
+        except LeaveType.DoesNotExist:
+            return Response({'error': 'Leave type not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class LeaveTypeDeleteAPIView(ModifiedApiview):
+    """Delete leave type"""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, leave_type_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user.is_superuser:
+                return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+            leave_type = LeaveType.objects.get(id=leave_type_id)
+            
+            if UserLeaveMapping.objects.filter(leave_type=leave_type).exists():
+                return Response({
+                    'error': 'Cannot delete leave type as it is assigned to users'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            leave_type.delete()
+
+            return Response({
+                'message': 'Leave type deleted successfully'
+            }, status=status.HTTP_200_OK)
+
+        except LeaveType.DoesNotExist:
+            return Response({'error': 'Leave type not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserLeaveMappingListAPIView(ModifiedApiview):
+    """List all user leave mappings"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user_id = request.query_params.get('user_id')
+            year = request.query_params.get('year', datetime.now().year)
+
+            mappings = UserLeaveMapping.objects.filter(year=year)
+            if user_id:
+                mappings = mappings.filter(user_id=user_id)
+
+            data = []
+            for m in mappings:
+                data.append({
+                    'id': m.id,
+                    'user_id': m.user.id,
+                    'user_name': m.user.username,
+                    'leave_type_id': m.leave_type.id,
+                    'leave_type_name': m.leave_type.name,
+                    'total_days': m.total_days,
+                    'remaining_days': m.remaining_days,
+                    'year': m.year,
+                    'created_at': m.created_at,
+                    'updated_at': m.updated_at
+                })
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class UserLeaveMappingCreateAPIView(ModifiedApiview):
+    """Create new user leave mapping"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+            user_id = request.data.get('user_id')
+            leave_type_id = request.data.get('leave_type_id')
+            total_days = request.data.get('total_days', 0)
+            year = request.data.get('year', datetime.now().year)
+
+            if not all([user_id, leave_type_id]):
+                return Response({'error': 'user_id and leave_type_id are required'}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+            with transaction.atomic():
+                mapping = UserLeaveMapping.objects.create(
+                    user_id=user_id,
+                    leave_type_id=leave_type_id,
+                    total_days=total_days,
+                    remaining_days=total_days,
+                    year=year
+                )
+
+            return Response({
+                'message': 'User leave mapping created successfully',
+                'id': mapping.id
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class UserLeaveMappingRetrieveAPIView(ModifiedApiview):
+    """Retrieve single user leave mapping"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, mapping_id):
+        try:
+            mapping = UserLeaveMapping.objects.get(id=mapping_id)
+            data = {
+                'id': mapping.id,
+                'user_id': mapping.user.id,
+                'user_name': mapping.user.username,
+                'leave_type_id': mapping.leave_type.id,
+                'leave_type_name': mapping.leave_type.name,
+                'total_days': mapping.total_days,
+                'remaining_days': mapping.remaining_days,
+                'year': mapping.year,
+                'created_at': mapping.created_at,
+                'updated_at': mapping.updated_at
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        except UserLeaveMapping.DoesNotExist:
+            return Response({'error': 'Mapping not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class UserLeaveMappingUpdateAPIView(ModifiedApiview):
+    """Update user leave mapping"""
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, mapping_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+            mapping = UserLeaveMapping.objects.get(id=mapping_id)
+            
+            total_days = request.data.get('total_days')
+            remaining_days = request.data.get('remaining_days')
+            year = request.data.get('year')
+
+            if total_days is not None:
+                mapping.total_days = total_days
+            if remaining_days is not None:
+                mapping.remaining_days = remaining_days
+            if year is not None:
+                mapping.year = year
+
+            mapping.save()
+
+            return Response({
+                'message': 'User leave mapping updated successfully',
+                'id': mapping.id
+            }, status=status.HTTP_200_OK)
+
+        except UserLeaveMapping.DoesNotExist:
+            return Response({'error': 'Mapping not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class UserLeaveMappingDeleteAPIView(ModifiedApiview):
+    """Delete user leave mapping"""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, mapping_id):
+        try:
+            user = self.get_user_from_token(request)
+            if not user:
+                return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+            mapping = UserLeaveMapping.objects.get(id=mapping_id)
+            mapping.delete()
+
+            return Response({
+                'message': 'User leave mapping deleted successfully'
+            }, status=status.HTTP_200_OK)
+
+        except UserLeaveMapping.DoesNotExist:
+            return Response({'error': 'Mapping not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class ApplyLeaveAPIView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
             user = self.get_user_from_token(request)
-            employee = user
-            leave_date = request.data.get("date")
-            remarks = request.data.get("remarks", "")
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            leave_type_id = request.data.get("leave_type_id")
+            start_date = request.data.get("start_date")
+            end_date = request.data.get("end_date")
+            reason = request.data.get("reason", "")
+            is_half_day = request.data.get("is_half_day", False)
 
-            if not leave_date:
-                return Response({"error": "Date is required"}, status=status.HTTP_400_BAD_REQUEST)
+            if not all([leave_type_id, start_date, end_date]):
+                return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
 
-            leave_date = date.fromisoformat(leave_date)
+            start_date = date.fromisoformat(start_date)
+            end_date = date.fromisoformat(end_date)
+            
+            if start_date > end_date:
+                return Response({"error": "End date must be after start date"}, status=status.HTTP_400_BAD_REQUEST)
 
-            with transaction.atomic():
-                attendance, created = EmployeeAttendance.objects.get_or_create(
-                    employee=employee, date=leave_date,
-                    defaults={"status": "leave", "remarks": remarks, "is_approved":False}
+            leave_type = LeaveType.objects.get(id=leave_type_id)
+            days = (end_date - start_date).days + 1  # Inclusive of both dates
+            
+            if is_half_day:
+                days = 0.5
+
+            # Check leave balance
+            current_year = date.today().year
+            try:
+                mapping = UserLeaveMapping.objects.get(
+                    user=user,
+                    leave_type=leave_type,
+                    year=current_year
+                )
+                if mapping.remaining_days < days:
+                    return Response(
+                        {"error": "Insufficient leave balance"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except UserLeaveMapping.DoesNotExist:
+                return Response(
+                    {"error": "No leave allocation found for this leave type"},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-                if not created:
-                    attendance.status = "leave"
-                    attendance.remarks = remarks
-                    attendance.is_approved = False
-                    attendance.save()
+            with transaction.atomic():
+                # Create leave application
+                leave_app = LeaveApplication.objects.create(
+                    employee=user,
+                    leave_type=leave_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                    days=days,
+                    reason=reason,
+                    status='pending'
+                )
 
-            return Response({"message": "Leave applied successfully"}, status=status.HTTP_201_CREATED)
 
-        except CustomUser.DoesNotExist:
-            return Response({"error": "Employee profile not found"}, status=status.HTTP_404_NOT_FOUND)
+                # Mark attendance as leave for each day
+                current_date = start_date
+                while current_date <= end_date:
+                    EmployeeAttendance.objects.update_or_create(
+                        employee=user,
+                        date=current_date,
+                        defaults={
+                            'status': 'leave',
+                            'remarks': f'Leave application #{leave_app.id}',
+                            'is_approved': False
+                        }
+                    )
+                    current_date += timedelta(days=1)
+
+            return Response(
+                {"message": "Leave applied successfully", "leave_id": leave_app.id},
+                status=status.HTTP_201_CREATED
+            )
+
+        except LeaveType.DoesNotExist:
+            return Response({"error": "Invalid leave type"}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError:
             return Response({"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class LeaveApprovalAPIView(ModifiedApiview):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, leave_id):
+        try:
+            approver = self.get_user_from_token(request)
+            action = request.data.get("action")  # 'approve' or 'reject'
+            rejection_reason = request.data.get("rejection_reason", "")
+
+            if action not in ['approve', 'reject']:
+                return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
+
+            leave_app = LeaveApplication.objects.get(id=leave_id)
+            
+            if leave_app.status != 'pending':
+                return Response(
+                    {"error": "Leave application is already processed"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            with transaction.atomic():
+                if action == 'approve':
+                    leave_app.status = 'approved'
+                    leave_app.approved_by = approver
+                    leave_app.approved_on = timezone.now()
+                    
+                    # Update attendance records
+                    EmployeeAttendance.objects.filter(
+                        employee=leave_app.employee,
+                        date__gte=leave_app.start_date,
+                        date__lte=leave_app.end_date,
+                        status='leave'
+                    ).update(is_approved=True)
+                    
+                    # Deduct from leave balance
+                    current_year = date.today().year
+                    mapping = UserLeaveMapping.objects.get(
+                        user=leave_app.employee,
+                        leave_type=leave_app.leave_type,
+                        year=current_year
+                    )
+                    mapping.remaining_days -= leave_app.days
+                    mapping.save()
+                    
+                else:
+                    leave_app.status = 'rejected'
+                    leave_app.rejection_reason = rejection_reason
+                    leave_app.approved_by = approver
+                    leave_app.approved_on = timezone.now()
+                    
+                    # Delete or mark attendance records
+                    EmployeeAttendance.objects.filter(
+                        employee=leave_app.employee,
+                        date__gte=leave_app.start_date,
+                        date__lte=leave_app.end_date,
+                        status='leave'
+                    ).delete()
+
+                leave_app.save()
+
+            return Response({"message": f"Leave application {action}d successfully"})
+
+        except LeaveApplication.DoesNotExist:
+            return Response({"error": "Leave application not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

@@ -1147,7 +1147,7 @@ class ClientWorkCategoryAssignmentRetrieveView(ModifiedApiview):
                 "start_date": assignment.start_date,
                 "completion_date": assignment.completion_date,
                 "required_files": list(assignment.required_files.values("file_name", "file_path", "id")),
-                "activities": list(assignment.activities.values("activity", "assigned_percentage", "status", "id")),
+                "activities": list(assignment.activities.values("activity", "assigned_percentage", "status", "id", "completion_date")),
                 "activity_stage": list(assignment.activity_stages.values("activity_stage", "status", "id")),
                 "output_files": list(assignment.output_files.values("file_name", "file_path", "id")),
             }
@@ -1246,6 +1246,9 @@ class SubmitClientWorkActivityList(ModifiedApiview):
                 assigned_file = AssignedWorkActivity.objects.get(id=file_data.get("id"), is_active=True)
                 assigned_file.status = file_data.get("status")
                 assigned_file.note = file_data.get("note")
+                if file_data.get("status") == "completed":
+                    assigned_file.completion_date = datetime.now()
+                assigned_file.updated_date = datetime.now()
                 assigned_file.save()
 
             return Response({"message": "Assignment updated successfully"}, status=status.HTTP_200_OK)

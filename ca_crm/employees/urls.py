@@ -3,7 +3,6 @@ from .views import (
     ClockInOutAPIView,
     CheckClockInStatusAPIView,
     RequestAttendanceAPIView,
-    ApplyLeaveAPIView,
     GetAttendanceAPIView,
     ApproveAttendanceAPIView,
     ImportHolidayAPIView,
@@ -11,6 +10,17 @@ from .views import (
     CreateHolidayAPIView,
     UpdateHolidayAPIView,
     DeleteHolidayAPIView,
+
+    LeaveTypeListAPIView, LeaveTypeCreateAPIView, LeaveTypeRetrieveAPIView,
+    LeaveTypeUpdateAPIView, LeaveTypeDeleteAPIView,
+    UserLeaveMappingListAPIView, UserLeaveMappingCreateAPIView,
+    UserLeaveMappingRetrieveAPIView, UserLeaveMappingUpdateAPIView,
+    UserLeaveMappingDeleteAPIView,
+
+    ApplyLeaveAPIView,
+    LeaveApprovalAPIView,
+
+
     RetrieveHolidayAPIView,
     BulkTimeTrackingCreateView,
     BulkTimeTrackingUpdateView,
@@ -25,6 +35,7 @@ urlpatterns = [
     path('check-clockin/', CheckClockInStatusAPIView.as_view(), name='Check-clockIn'),
     path('Request-attendance/', RequestAttendanceAPIView.as_view(), name="Request Attendance"),
     path("apply-leave/", ApplyLeaveAPIView.as_view(), name="apply-leave"),
+    path("approve-leave/", LeaveApprovalAPIView.as_view(), name="approve-leave"),
     path("attendance-view/", GetAttendanceAPIView.as_view(), name="Attendance-view"),
     path("approve-attendance/", ApproveAttendanceAPIView.as_view(), name="Attendance-approve"),
     
@@ -34,6 +45,19 @@ urlpatterns = [
     path("holidays/<int:id>/", RetrieveHolidayAPIView.as_view(), name="retrieve-holiday"),
     path("holidays/update/<int:id>/", UpdateHolidayAPIView.as_view(), name="update-holiday"),
     path("holidays/delete/<int:id>/", DeleteHolidayAPIView.as_view(), name="delete-holiday"),
+
+    path('leave-types/', LeaveTypeListAPIView.as_view(), name='leave-type-list'),
+    path('leave-types/create/', LeaveTypeCreateAPIView.as_view(), name='leave-type-create'),
+    path('leave-types/<int:leave_type_id>/', LeaveTypeRetrieveAPIView.as_view(), name='leave-type-retrieve'),
+    path('leave-types/<int:leave_type_id>/update/', LeaveTypeUpdateAPIView.as_view(), name='leave-type-update'),
+    path('leave-types/<int:leave_type_id>/delete/', LeaveTypeDeleteAPIView.as_view(), name='leave-type-delete'),
+    
+    # UserLeaveMapping URLs
+    path('user-leave-mappings/', UserLeaveMappingListAPIView.as_view(), name='user-leave-mapping-list'),
+    path('user-leave-mappings/create/', UserLeaveMappingCreateAPIView.as_view(), name='user-leave-mapping-create'),
+    path('user-leave-mappings/<int:mapping_id>/', UserLeaveMappingRetrieveAPIView.as_view(), name='user-leave-mapping-retrieve'),
+    path('user-leave-mappings/<int:mapping_id>/update/', UserLeaveMappingUpdateAPIView.as_view(), name='user-leave-mapping-update'),
+    path('user-leave-mappings/<int:mapping_id>/delete/', UserLeaveMappingDeleteAPIView.as_view(), name='user-leave-mapping-delete'),
 
     path("day-sheet/", TimeTrackingListView.as_view(), name="day-sheet-list"),
     path("day-sheet/new/", BulkTimeTrackingCreateView.as_view(), name="create-day-sheet"),

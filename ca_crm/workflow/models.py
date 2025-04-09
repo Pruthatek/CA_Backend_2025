@@ -223,7 +223,7 @@ class AssignedWorkActivity(models.Model):
     note = models.CharField(max_length=100, null=True, blank=True)
     display_order = models.PositiveIntegerField(default=0, null=True, blank=True)
     start_date = models.DateField(blank=True, null=True)
-    completion_date = models.DateField(blank=True, null=True)
+    completion_date = models.DateTimeField(blank=True, null=True)
     updated_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
 

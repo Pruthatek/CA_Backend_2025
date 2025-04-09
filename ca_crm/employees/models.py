@@ -91,3 +91,52 @@ class TimeTracking(models.Model):
 
     def __str__(self):
         return f"{self.employee.username} - {self.date} ({self.task_type})"
+    
+
+class LeaveType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+    max_days = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class UserLeaveMapping(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    total_days = models.PositiveIntegerField(default=0)
+    remaining_days = models.PositiveIntegerField(default=0)
+    year = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'leave_type', 'year')
+
+
+class LeaveApplication(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+    
+    employee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='leave_applications')
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE, related_name="applied_leave")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    days = models.PositiveIntegerField(default=1)
+    reason = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
+    approved_on = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.employee.username} - {self.leave_type.name} ({self.start_date} to {self.end_date})"
