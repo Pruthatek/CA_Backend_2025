@@ -274,7 +274,7 @@ class LeaveTypeUpdateAPIView(ModifiedApiview):
     def put(self, request, leave_type_id):
         try:
             user = self.get_user_from_token(request)
-            if not user.is_superuser:
+            if not user:
                 return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
             leave_type = LeaveType.objects.get(id=leave_type_id)
@@ -312,7 +312,7 @@ class LeaveTypeDeleteAPIView(ModifiedApiview):
     def delete(self, request, leave_type_id):
         try:
             user = self.get_user_from_token(request)
-            if not user.is_superuser:
+            if not user:
                 return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
             leave_type = LeaveType.objects.get(id=leave_type_id)
