@@ -1051,7 +1051,9 @@ class ClientWorkCategoryAssignmentListView(ModifiedApiview):
             user = self.get_user_from_token(request)
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
-            assignments = ClientWorkCategoryAssignment.objects.filter(is_active=True)
+            start_date = request.GET.get("start_date", None)
+            end_date = request.GET.get("end_date", None)
+            assignments = ClientWorkCategoryAssignment.objects.filter(is_active=True, start_date__gte=start_date, start_date__lte=end_date)
             data = []
             for assignment in assignments:
                 data.append({

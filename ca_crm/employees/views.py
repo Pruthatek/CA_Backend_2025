@@ -808,7 +808,10 @@ class HolidayListAPIView(ModifiedApiview):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        holidays = Holiday.objects.all()
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        
+        holidays = Holiday.objects.filter(date__gte=start_date, date__lte=end_date)
         data = [
             {
                 "id": h.id,

@@ -166,7 +166,13 @@ class BillingListView(ModifiedApiview):
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            bills = Billing.objects.all().values(
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            
+
+            bills = Billing.objects.filter(
+                invoice_date__range=[start_date, end_date]
+            ).values(
                 'id', 'bill_type', 'billing_company', 'customer__name_of_business', 'invoice_date', "due_date", 'total', 'payment_status'
             )
 
@@ -562,7 +568,9 @@ class ReceiptListAPIView(ModifiedApiview):
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            receipts = Receipt.objects.all()
+            start_date = request.GET.get("start_date")
+            end_date = request.GET.get("end_date")
+            receipts = Receipt.objects.filter(payment_date__range=[start_date, end_date]).order_by('-payment_date')
             receipt_list = []
 
             for receipt in receipts:
@@ -889,7 +897,9 @@ class CreditNoteListView(ModifiedApiview):
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
             # Fetch all CreditNote records
-            credit_notes = CreditNote.objects.all()
+            start_date = request.GET.get("start_date")
+            end_date = request.GET.get("end_date")
+            credit_notes = CreditNote.objects.filter(created_date__range=[start_date, end_date]).order_by('-created_date')
             credit_note_list = []
 
             for credit_note in credit_notes:
@@ -1165,7 +1175,9 @@ class DebitNoteListView(ModifiedApiview):
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
             # Fetch all DebitNote records
-            debit_notes = DebitNote.objects.all()
+            start_date = request.GET.get("start_date")
+            end_date = request.GET.get("end_date")
+            debit_notes = DebitNote.objects.filter(created_date__range=[start_date, end_date]).order_by('-created_date')
             debit_note_list = []
 
             for debit_note in debit_notes:

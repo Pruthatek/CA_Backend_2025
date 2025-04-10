@@ -86,7 +86,10 @@ class ExpenseListView(ModifiedApiview):
             if not user:
                 return Response({"Error": "You don't have permissions"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            expenses = Expense.objects.all()
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            
+            expenses = Expense.objects.filter(expense_date__range=(start_date, end_date))
             expense_list = []
             for expense in expenses:
                 expense_list.append({
