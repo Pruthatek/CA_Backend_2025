@@ -7,7 +7,7 @@ from datetime import date
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ca_crm.settings')  # change this
 django.setup()
 
-from employees.models import Role, Permission, RolePermission, CustomUser, EmployeeProfile, ReportingUser
+from custom_auth.models import Role, Permission, RolePermission, CustomUser, EmployeeProfile, ReportingUser
 
 def create_admin_user():
     with transaction.atomic():
