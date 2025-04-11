@@ -138,6 +138,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # CORS_ALLOW_ALL_ORIGINS = True  # For development only
 CORS_ALLOWED_ORIGINS = [
     "https://erp.vatsalsharma.com",
+    "https://erpapi.vatsalsharma.com"
 ]
 CORS_ALLOW_CREDENTIALS = True
 # Internationalization
